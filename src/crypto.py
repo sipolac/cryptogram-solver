@@ -1,37 +1,20 @@
-from collections import Counter, defaultdict
+from collections import Counter, defaultdict, namedtuple
 from enum import Enum
 from math import log
+from random import shuffle
 from string import ascii_lowercase
 from tqdm import tqdm
-import random
 import re
 
 
 LETTERS = set(ascii_lowercase)
 
 
+Token = namedtuple('Token', 'ngrams kind n')
+
+
 class NgramKind(Enum):
-    word = 1
-    char = 2
-
-    def __repr__(self):
-        return self.name
-
-
-class Token:
-    def __init__(self, ngrams, kind, n):
-        self.ngrams = ngrams
-        self.kind = kind
-        self.n = n  # n in n-gram
-
-    def __hash__(self):
-        return hash(str(self))
-
-    def __repr__(self):
-        return str((self.ngrams, self.kind, self.n))
-
-    def __eq__(self, other):
-        return str(self) == str(other)
+    word, char = range(2)
 
 
 class Tokenizer:
@@ -74,10 +57,20 @@ class Tokenizer:
             tokens = defaultdict(lambda: self.pseudo_count)
         text = self.clean_text(text)
         words = self.get_words(text)
-        self.add_ngram_tokens(words, self.word_ngram_range, NgramKind.word, tokens)
+        self.add_ngram_tokens(
+            words,
+            self.word_ngram_range,
+            NgramKind.word,
+            tokens
+        )
         for word in words:
             word = '<' + word + '>'
-            self.add_ngram_tokens(word, self.char_ngram_range, NgramKind.char, tokens)
+            self.add_ngram_tokens(
+                word,
+                self.char_ngram_range,
+                NgramKind.char,
+                tokens
+            )
         return tokens
 
     def fit(self, texts):
@@ -115,70 +108,19 @@ class Tokenizer:
 class Doc:
     def __init__(self, text):
         self.text = text.lower()
-        self.letters = None
-        self.set_letters()
+        self.mapping = LETTERS  # initialize as a=a, b=b, etc.
 
-    def set_letters(self):
-        letters = re.findall('[a-z]', self.text)
-        self.letters = set(letters)
+    def swap(self, l1, l2):
+        """Swap two letters in mapping."""
+        tmp = '_'
+        self.mapping = self.mapping\
+            .replace(l1, tmp)\
+            .replace(l2, l1)\
+            .replace(tmp, l2)
 
-    def swap(self, letter1, letter2):
-        """Swap two letter assignments in text."""
-        to_swap = letter1 + letter2
-        transtab = self.text.maketrans(to_swap, to_swap[::-1])
-        swapped = self.text.translate(transtab)
-        return swapped
+    def scramble(self):
+        shuffle(self.mapping)
 
-    def swap_random(self):
-        """Swap two random letter assignments."""
-        letter1 = random.choice(list(self.letters))
-        letter2 = random.choice(list(LETTERS - set(letter1)))
-        swapped = self.swap(letter1, letter2)
-        return swapped
-
-    def scramble(self, n=15):
-        for _ in range(n):
-            self.__init__(self.swap_random())
-
-
-# -----------------------------------------------------------------------------
-# Code graveyard
-# -----------------------------------------------------------------------------
-
-# def get_ngrams(self, lst, ngram_range):
-#     """Get n-grams of words (if input is list) or characters (str)."""
-#     char = isinstance(lst, str)  # parse char n-grams?
-#     tokens = defaultdict(int)
-#     for j in range(ngram_range[0], ngram_range[1] + 1):
-#         for i in range(len(lst) - j + 1):
-#             token = lst[i:i + j]
-#             if not char:
-#                 token = ' '.join(token)
-#             tokens[token] += 1
-#     return tokens
-
-# def get_ngrams(lst, n):
-#     """Get n-grams of words (if input is list) or characters (str)."""
-#     char = isinstance(lst, str)  # parse char n-grams?
-#     tokens = defaultdict(int)
-#     for i in range(len(lst) - n + 1):
-#         token = lst[i:i + n]
-#         if not char:
-#             token = ' '.join(token)
-#         tokens[token] += 1
-#     return tokens
-
-# def counts_to_log_probs(self, tokens):
-#     self.total = sum(tokens.values())
-#     probs = dict()
-#     for token, count in tokens.items():
-#         probs[token] = log(count / self.total)
-#     return probs
-
-# def count_ngrams(self, lst, n):
-#     """Get n-grams of words (if input is list) or characters (str)."""
-#     ngrams = defaultdict(int)
-#     for i in range(len(lst) - n + 1):
-#         ngram = tuple(lst[i:i + n])
-#         ngrams[ngram] += 1
-#     return ngrams
+    def translate(self):
+        trans = ''.maketrans(self.mapping, LETTERS)
+        return self.text.translate(trans)
