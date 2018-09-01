@@ -1,7 +1,7 @@
 from collections import Counter, defaultdict, namedtuple
 from enum import Enum
 from math import log
-from random import shuffle
+from random import sample
 from string import ascii_lowercase as LETTERS
 from tqdm import tqdm
 import re
@@ -12,6 +12,38 @@ Token = namedtuple('Token', 'ngrams kind n')
 
 class NgramKind(Enum):
     word, char = range(2)
+
+
+class Mapping:
+    def __init__(self, letters=None):
+        if letters is None:
+            self.letters = LETTERS  # initialize as a -> a, b -> b, etc.
+
+    def scramble(self):
+        self.letters = sample(self.letters, len(self.letters))
+
+    def swap(self, l1, l2, inplace=False):
+        tmp = '_'
+        letters = self.letters\
+            .replace(l1, tmp)\
+            .replace(l2, l1)\
+            .replace(tmp, l2)
+        if inplace:
+            self.letters = letters
+        else:
+            return self
+
+    def translate(self, text):
+        trans = ''.maketrans(self.letters, LETTERS)
+        return text.translate(trans)
+
+
+class Doc:
+    def __init__(self, text):
+        self.text = text.lower()
+
+    def get_letters(self):
+        return list(set(self.text) & set(LETTERS))
 
 
 class Tokenizer:
@@ -87,52 +119,22 @@ class Tokenizer:
         subsetted = sorted_tups[:self.vocab_size]
         self.vocab = dict(subsetted)
 
+
+class Solver:
+    def __init__(self, tokenizer, doc):
+        self.tokenizer = tokenizer
+        self.doc = doc
+
     def calc_nll(self, text):
         """Caluclate mean negative log likelihood."""
-        tokens = self.tokenize(text)
+        tokens = self.tokenizer.tokenize(text)
         nll = 0
         for token, count in tokens.items():
             try:
-                vocab_count = self.vocab[token]
+                vocab_count = self.tokenizer.vocab[token]
             except KeyError:
-                vocab_count = self.pseudo_count
-            total = self.totals[(token.kind, token.n)]  # this could break
+                vocab_count = self.tokenizer.pseudo_count
+            total = self.tokenizer.totals[(token.kind, token.n)]  # could break
             prob = vocab_count / total
             nll += -1 * log(prob) * count
         return nll / len(tokens)  # take mean
-
-
-class Mapping:
-    def __init__(self, letters=None):
-        if letters is None:
-            self.letters = LETTERS  # initialize as a -> a, b -> b, etc.
-
-    def scramble(self, inplace=False):
-        shuffle(self.letters)
-
-    def swap(self, l1, l2, inplace=False):
-        tmp = '_'
-        letters = self.letters\
-            .replace(l1, tmp)\
-            .replace(l2, l1)\
-            .replace(tmp, l2)
-        if inplace:
-            self.letters = letters
-        else:
-            return self
-
-    def translate(self, text):
-        trans = ''.maketrans(self.letters, LETTERS)
-        return text.translate(trans)
-
-
-class Doc:
-    def __init__(self, text):
-        self.text = text.lower()
-
-    def get_letters(self):
-        return list(set(self.text) & set(LETTERS))
-
-    # def translate(self, mapping):
-    #     trans = ''.maketrans(mapping.letters, LETTERS)
-    #     return self.text.translate(trans)
