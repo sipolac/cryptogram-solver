@@ -2,12 +2,9 @@ from collections import Counter, defaultdict, namedtuple
 from enum import Enum
 from math import log
 from random import shuffle
-from string import ascii_lowercase
+from string import ascii_lowercase as LETTERS
 from tqdm import tqdm
 import re
-
-
-LETTERS = set(ascii_lowercase)
 
 
 Token = namedtuple('Token', 'ngrams kind n')
@@ -23,7 +20,7 @@ class Tokenizer:
         char_ngram_range=(1, 6),
         word_ngram_range=(1, 2),
         pseudo_count=1,
-        vocab_size=10000
+        vocab_size=100000
     ):
         self.char_ngram_range = char_ngram_range
         self.word_ngram_range = word_ngram_range
@@ -105,22 +102,37 @@ class Tokenizer:
         return nll / len(tokens)  # take mean
 
 
-class Doc:
-    def __init__(self, text):
-        self.text = text.lower()
-        self.mapping = LETTERS  # initialize as a=a, b=b, etc.
+class Mapping:
+    def __init__(self, letters=None):
+        if letters is None:
+            self.letters = LETTERS  # initialize as a -> a, b -> b, etc.
 
-    def swap(self, l1, l2):
-        """Swap two letters in mapping."""
+    def scramble(self, inplace=False):
+        shuffle(self.letters)
+
+    def swap(self, l1, l2, inplace=False):
         tmp = '_'
-        self.mapping = self.mapping\
+        letters = self.letters\
             .replace(l1, tmp)\
             .replace(l2, l1)\
             .replace(tmp, l2)
+        if inplace:
+            self.letters = letters
+        else:
+            return self
 
-    def scramble(self):
-        shuffle(self.mapping)
+    def translate(self, text):
+        trans = ''.maketrans(self.letters, LETTERS)
+        return text.translate(trans)
 
-    def translate(self):
-        trans = ''.maketrans(self.mapping, LETTERS)
-        return self.text.translate(trans)
+
+class Doc:
+    def __init__(self, text):
+        self.text = text.lower()
+
+    def get_letters(self):
+        return list(set(self.text) & set(LETTERS))
+
+    # def translate(self, mapping):
+    #     trans = ''.maketrans(mapping.letters, LETTERS)
+    #     return self.text.translate(trans)
