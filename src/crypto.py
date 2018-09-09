@@ -100,11 +100,11 @@ class Tokenizer:
             ngrams = self.count_ngrams(lst, n)
             for ngram, count in ngrams.items():
                 token = Token(ngram, kind, n)
-                tokens[token] += count
+                tokens[token] = tokens.get(token, 0) + count
 
     def tokenize(self, text, tokens=None):
         if tokens is None:
-            tokens = defaultdict(int)
+            tokens = dict()
         text = self.clean_text(text)
         words = self.get_words(text)
         if self.word_ngram_range is not None:
@@ -126,7 +126,7 @@ class Tokenizer:
         return tokens
 
     def fit(self, texts):
-        self.vocab = defaultdict(int)
+        self.vocab = dict()
         for text in tqdm(texts):
             self.vocab = self.tokenize(text, self.vocab)
         self.calc_totals()
@@ -136,6 +136,7 @@ class Tokenizer:
         self.totals = defaultdict(int)
         for token, count in self.vocab.items():
             self.totals[(token.kind, token.n)] += count
+        self.totals = dict(self.totals)
 
     def subset_vocab(self):
         sorted_tups = sorted(self.vocab.items(), key=lambda x: -x[1])
