@@ -17,7 +17,7 @@ The goal of this project is to create a tool that can automatically solve [crypt
 
 # General approach
 
-Although it's perhaps more algorithmically elegant to use a dictionary-based approach (as has been done before), I'll use a statistical method with word- and character-level n-grams. There are two major reasons for this:
+Although it's perhaps more algorithmically straightfoward to use a dictionary-based approach (as has been done before), I'll use a statistical method with word- and character-level n-grams. There are two major reasons for this:
 - A statistical approach may be an elegant way of avoiding two limitations of dictionary-based approaches, which are that they rely heavily on the completeness of the dictionary and that they don't put a larger "prior" on more common words. (Inspiration: [Enriching Word Vectors with Subword Information](https://arxiv.org/abs/1607.04606).)
 - I find the optimization problem interesting: there are many local minima where the optimizer can get trapped, and this depends quite a bit on the tokenization and scoring schemes. For example, if the scorer weights word-level unigrams very heavily and character-level n-grams lightly, then the optimizer may not want to change the mapping of any letters in a word if  the model knows the word "exists" (i.e., has a non-zero frequency in some training set).
 
