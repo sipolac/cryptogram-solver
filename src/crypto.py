@@ -7,6 +7,7 @@ from time import time
 import re
 
 from tqdm import tqdm
+import numpy as np   # for softmax; code remove this dependency later
 
 
 Token = namedtuple('Token', 'ngrams kind n')
@@ -95,20 +96,28 @@ class Tokenizer:
         return Counter(zip(*[lst[i:] for i in range(n)]))
 
     def add_ngram_tokens(self, lst, ngram_range, kind, tokens):
-        """Add n-gram tokens to given dictionary of tokens."""
+        """Add n-gram tokens to given dictionary of tokens.
+
+        Mutates tokens, but also returns it for readability.
+        """
         for n in range(ngram_range[0], ngram_range[1] + 1):
             ngrams = self.count_ngrams(lst, n)
             for ngram, count in ngrams.items():
                 token = Token(ngram, kind, n)
                 tokens[token] = tokens.get(token, 0) + count
+        return tokens
 
     def tokenize(self, text, tokens=None):
+        """Tokenize text into char- and word-level n-grams.
+
+        Mutates tokens, but also returns it for readability.
+        """
         if tokens is None:
             tokens = dict()
         text = self.clean_text(text)
         words = self.get_words(text)
         if self.word_ngram_range is not None:
-            self.add_ngram_tokens(
+            tokens = self.add_ngram_tokens(
                 words,
                 self.word_ngram_range,
                 NgramKind.word,
@@ -117,7 +126,7 @@ class Tokenizer:
         if self.char_ngram_range is not None:
             for word in words:
                 word = '<' + word + '>'
-                self.add_ngram_tokens(
+                tokens = self.add_ngram_tokens(
                     word,
                     self.char_ngram_range,
                     NgramKind.char,
@@ -161,8 +170,8 @@ class Solver:
             nll += -1 * log_prob * count
         return nll / len(tokens)  # take mean
 
-    # def softmax(x, temp=1):
-    #     return np.exp(x / temp) / np.sum(np.exp(x / temp), axis=0)
+    def softmax(self, x, temp=1):
+        return np.exp(x / temp) / np.sum(np.exp(x / temp), axis=0)
 
     # Need to add simulated annealing code or other algo here.
 
@@ -185,8 +194,7 @@ def get_swap_options(letters, p=1):
     for l1 in letters:
         for l2 in set(LETTERS) - set(l1):
             swap = tuple(sorted([l1, l2]))
-            if swap not in combos:
-                combos.add(swap)
+            combos.add(swap)
     n = max(int(len(combos) * p), 1)
     combos = sample(list(combos), n)
     return combos
