@@ -4,13 +4,17 @@
 Authors: Chris Sipola
 Created: 2019-02-07
 
-Functions for getting and manipulating training data.
+Functions for processing data used to fit the solver.
 """
-from pathlib import Path
 import codecs
 import csv
 import sys
 import zipfile
+
+from cryptogram_solver import utils
+
+
+PROJECT_DIR = utils.get_project_dir()
 
 
 def get_news_articles(num_articles=10000):
@@ -18,8 +22,8 @@ def get_news_articles(num_articles=10000):
     csv.field_size_limit(sys.maxsize)
     articles = list()
     for article_num in range(1, 4):
-        zipname = Path('..', 'data', 'raw', f'articles{article_num}.csv.zip')
         filename = f'articles{article_num}.csv'
+        zipname = PROJECT_DIR / 'data' / 'raw' / f'{filename}.zip'
         with zipfile.ZipFile(zipname) as z:
             with z.open(filename, 'r') as f:
                 csvfile = csv.reader(codecs.iterdecode(f, 'utf-8'))
