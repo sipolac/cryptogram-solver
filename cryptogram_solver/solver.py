@@ -1,23 +1,24 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Authors: Chris Sipola
+Created: 2019-02-07
+
+Functions for solving cryptograms.
+"""
 from collections import Counter, defaultdict, namedtuple
-from enum import Enum
-from math import log
-from random import sample
+from math import exp, log
+from random import sample, uniform
 from string import ascii_lowercase as LETTERS
-from time import time
+# from time import time
+import logging
 import re
 
 from tqdm import tqdm
-import numpy as np   # for softmax; code remove this dependency later
+import numpy as np   # for softmax; TODO: remove this dependency later
 
 
 Token = namedtuple('Token', 'ngrams kind n')
-
-
-class NgramKind(Enum):
-    word, char = range(2)
-
-    def __repr__(self):
-        return f'<NgramKind: {self.name}>'
 
 
 class Doc(str):
@@ -27,7 +28,7 @@ class Doc(str):
 
     @property
     def letters(self):
-        return self._letters
+        pass
 
     @letters.getter
     def letters(self):
@@ -38,35 +39,21 @@ class Doc(str):
 
 
 class Mapping:
-    def __init__(self, mapping=None):
-        if mapping is None:
-            self.mapping = LETTERS  # initialize as a -> a, b -> b, etc.
-        else:
-            self.mapping = mapping
+    def __init__(self, key=None):
+        self.key = key or LETTERS
 
     def scramble(self):
-        self.mapping = ''.join(sample(self.mapping, len(self.mapping)))
+        self.key = ''.join(sample(self.key, len(self.key)))
 
-    def swap(self, l1, l2, inplace=False):
-        tmp = '_'
-        mapping = self.mapping\
-            .replace(l1, tmp)\
-            .replace(l2, l1)\
-            .replace(tmp, l2)
-        if inplace:
-            self.mapping = mapping
-        else:
-            return Mapping(mapping)
-
-    def random_swap(self, letters=None, inplace=False):
-        if letters is None:
-            letters = LETTERS
-        l1 = sample(letters, 1)[0]
-        l2 = sample(set(LETTERS) - set(l1), 1)[0]
-        return self.swap(l1, l2, inplace)
+    def random_swap(self, n=1):
+        key = list(self.key)
+        for _ in range(n):
+            i1, i2 = sample(range(len(LETTERS)), 2)
+            key[i1], key[i2] = key[i2], key[i1]
+        return Mapping(''.join(key))
 
     def translate(self, text):
-        trans = str.maketrans(self.mapping, LETTERS)
+        trans = str.maketrans(self.key, LETTERS)
         return type(text)(text.translate(trans))
 
 
@@ -75,7 +62,7 @@ class Tokenizer:
         self,
         char_ngram_range=(1, 3),
         word_ngram_range=(1, 1),
-        vocab_size=1000000
+        vocab_size=100000
     ):
         self.char_ngram_range = char_ngram_range
         self.word_ngram_range = word_ngram_range
@@ -120,7 +107,7 @@ class Tokenizer:
             tokens = self.add_ngram_tokens(
                 words,
                 self.word_ngram_range,
-                NgramKind.word,
+                'word',
                 tokens
             )
         if self.char_ngram_range is not None:
@@ -129,86 +116,96 @@ class Tokenizer:
                 tokens = self.add_ngram_tokens(
                     word,
                     self.char_ngram_range,
-                    NgramKind.char,
+                    'char',
                     tokens
                 )
         return tokens
 
     def fit(self, texts):
+        """Fit tokenizer to data.
+
+        Also subset for most frequent tokens. Keep track of frequencies
+        of individual tokens and of token types.
+        """
         self.vocab = dict()
         for text in tqdm(texts):
             self.vocab = self.tokenize(text, self.vocab)
-        self.calc_totals()
-        self.subset_vocab()
 
-    def calc_totals(self):
+        # Count totals by token type (kind & n-gram).
         self.totals = defaultdict(int)
         for token, count in self.vocab.items():
             self.totals[(token.kind, token.n)] += count
         self.totals = dict(self.totals)
 
-    def subset_vocab(self):
+        # Subset vocab for most frequent.
         sorted_tups = sorted(self.vocab.items(), key=lambda x: -x[1])
         subsetted = sorted_tups[:self.vocab_size]
         self.vocab = dict(subsetted)
 
 
 class Solver:
-    def __init__(self, tokenizer, text, pseudo_count):
+    def __init__(self, tokenizer, pseudo_count=1, logger=None):
+        self.logger = logger or logging.getLogger(__name__)
+
         self.tokenizer = tokenizer
-        self.text = text
         self.pseudo_count = pseudo_count
 
     def score(self, text):
         """Caluclate (mean) negative log likelihood."""
         tokens = self.tokenizer.tokenize(text)
-        nll = 0
+        nll = 0  # negative log likelihood
         for token, count in tokens.items():
-            vocab_count = self.tokenizer.vocab.get(token, 0) + self.pseudo_count
-            total = self.tokenizer.totals[(token.kind, token.n)]  # could break
-            log_prob = log(vocab_count) - log(total)
+            vocab_cnt = self.tokenizer.vocab.get(token, 0) + self.pseudo_count
+            total = self.tokenizer.totals[(token.kind, token.n)]
+            log_prob = log(vocab_cnt) - log(total)
             nll += -1 * log_prob * count
         return nll / len(tokens)  # take mean
 
-    def softmax(self, x, temp=1):
-        return np.exp(x / temp) / np.sum(np.exp(x / temp), axis=0)
+    def solve(self, text, num_epochs=10000):
+        """Solve using simulated annealing."""
 
-    # Need to add simulated annealing code or other algo here.
+        doc = Doc(text)
+        mapping = Mapping()
 
+        # Schedule temperature and number of letter swaps to be made.
+        temps = np.exp(np.linspace(0, -6, num_epochs))
+        n_swap_list = np.round(np.linspace(3, 1, num_epochs)).astype(int)
 
-class Timer:
-    def __init__(self):
-        self.t0 = None
-        self.t1 = None
+        best_mapping = mapping
+        best_score = self.score(doc)
+        epoch = 0
 
-    def tic(self):
-        self.t0 = time()
+        decisions = defaultdict(int)
 
-    def toc(self):
-        self.t1 = time()
-        return self.t1 - self.t0
+        for temp, n_swaps in tqdm(zip(temps, n_swap_list)):
 
+            new_mapping = mapping.random_swap(n_swaps)
+            new_doc = new_mapping.translate(doc)
+            score = self.score(new_doc)
 
-def get_swap_options(letters, p=1):
-    combos = set()
-    for l1 in letters:
-        for l2 in set(LETTERS) - set(l1):
-            swap = tuple(sorted([l1, l2]))
-            combos.add(swap)
-    n = max(int(len(combos) * p), 1)
-    combos = sample(list(combos), n)
-    return combos
+            score_change = score - best_score
 
+            if score_change < 0:
+                best_mapping = new_mapping
+                best_score = score
+                decisions['good'] += 1
+            elif exp(-score_change / temp) > uniform(0, 1):
+                # Break this out as different section just for debugging.
+                best_mapping = new_mapping
+                best_score = score
+                decisions['bad_keep'] += 1
+            else:
+                # Again, just for debugging.
+                decisions['bad_pass'] += 1
 
-# -----------------------------------------------------------------------------
-# Graveyard
-# -----------------------------------------------------------------------------
+            mapping = best_mapping
+            epoch += 1
 
-# def p_scheduler():
-#     p = 0.
-#     step = 0.01
-#     while True:
-#         yield p
-#         if p > 0.5:
-#             p = 1
-#         p = min(p + step, 1)
+            if epoch % 1000 == 0:
+                self.logger.debug(f'{score:0.5g}, {mapping.key}, {mapping.translate(doc).text}')
+                self.logger.debug(sorted(list(decisions.items())))
+                # logger.debug(pd.DataFrame(sorted(list(decisions.items()))))
+                decisions = defaultdict(int)
+
+        self.logger.info(f'\nfinal best ({epoch} epochs): {best_score:0.5g}')
+        return mapping.translate(doc).text
