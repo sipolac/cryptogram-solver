@@ -19,6 +19,9 @@ def get_project_dir():
 
 
 def linspace(start, stop, num):
-    """Basic functionality of numpy's `linspace`."""
+    """Basic functionality of numpy's `linspace`.
+    
+    https://docs.scipy.org/doc/numpy/reference/generated/numpy.linspace.html
+    """
     step_size = (stop - start) / (num - 1)
     return [start + step_size * i for i in range(num)]
