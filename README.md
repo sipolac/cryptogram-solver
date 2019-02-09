@@ -1,3 +1,3 @@
 # cryptogram-solver
 
-Solver for cryptograms (substitution ciphers),
+Solver for cryptograms (substitution ciphers).

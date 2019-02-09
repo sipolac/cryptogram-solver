@@ -54,7 +54,6 @@ class Tokenizer:
         return Counter(zip(*[lst[i:] for i in range(n)]))
 
     def get_tokens(self, lst, ngram_range, kind):
-        """Creates token objects."""
         tokens = dict()
         for n in range(ngram_range[0], ngram_range[1] + 1):
             ngrams = self.count_ngrams(lst, n)
@@ -146,8 +145,8 @@ class Solver:
 
         This uses a pre-set scheduler for both temperature (from simulated
         annealing) and the number of letters randomly swapped in an iteration
-        of simulated annealing.  In the beginning there's a high temperature
-        and high number of letter swaps to encourage exploration.
+        of simulated annealing.  In the beginning there's a higher temperature
+        and larger number of letter swaps to encourage exploration.
         """
         encrypted = clean_text(encrypted)
         mapping = Mapping()
@@ -197,7 +196,7 @@ def main(
     vocab_size,
     n_docs,
     pseudo_count,
-    log_level='DEBUG'
+    log_level='INFO'
 ):
     log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     logging.basicConfig(level=log_level, format=log_fmt)
@@ -226,14 +225,35 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-t', '--text')
-    parser.add_argument('-e', '--num_epochs', default=10000)
-    parser.add_argument('-c', '--char_ngram_range', nargs=2, default=(2, 3))
-    parser.add_argument('-w', '--word_ngram_range', nargs=2, default=(1, 1), type=int)
-    parser.add_argument('-b', '--vocab_size', default=10000)
-    parser.add_argument('-d', '--n_docs', default=100)
-    parser.add_argument('-p', '--pseudo_count', default=1)
-    parser.add_argument('-v', '--verbose', action='count', default=0)
+    parser.add_argument('-t', '--text', help='text to be decrypted')
+    parser.add_argument(
+        '-e', '--num_epochs', default=10000,
+        help='number of epochs during simulated annealing process'
+    )
+    parser.add_argument(
+        '-c', '--char_ngram_range', nargs=2, default=(2, 3), type=int,
+        help='range of character n-grams to use in tokenization'
+    )
+    parser.add_argument(
+        '-w', '--word_ngram_range', nargs=2, default=(1, 1), type=int,
+        help='range of word n-grams to use in tokenization'
+    )
+    parser.add_argument(
+        '-b', '--vocab_size', default=10000,
+        help='size of vocabulary to use for scoring (other words are OOV)'
+    )
+    parser.add_argument(
+        '-d', '--n_docs', default=100,
+        help='number of documents used to estimate token frequencies'
+    )
+    parser.add_argument(
+        '-p', '--pseudo_count', default=1,
+        help='number added to all token frequencies for smoothing'
+    )
+    parser.add_argument(
+        '-v', '--verbose', action='count', default=0,
+        help='verbose output for showing solve process'
+    )
     args = parser.parse_args()
 
     args.verbose = min(args.verbose, 1)
