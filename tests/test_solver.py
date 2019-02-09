@@ -28,7 +28,7 @@ def test_simple_cryptogram():
 
     # Define tokenizer and solver.
     tokenizer = solver.Tokenizer(
-        char_ngram_range=(1, 3),
+        char_ngram_range=(2, 3),
         word_ngram_range=(1, 1)
     )
     slv = solver.Solver(tokenizer, vocab_size=10000, pseudo_count=1)

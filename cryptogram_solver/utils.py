@@ -21,7 +21,7 @@ def get_project_dir():
 def linspace(start, stop, num):
     """Return evenly spaced numbers over a specified interval.
 
-    This just replicates the basic functionality of numpy's `linspace`:
+    This is a simple version of numpy's `linspace`:
     https://docs.scipy.org/doc/numpy/reference/generated/numpy.linspace.html
     """
     step_size = (stop - start) / (num - 1)
