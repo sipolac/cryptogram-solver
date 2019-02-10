@@ -2,6 +2,8 @@
 
 Solver for cryptograms (substitution ciphers).
 
+![](references/demo.gif)
+
 # TODO
 - Add two arguments for temperature and one for number of characters (just need to specify the start)
 - Finish this README!

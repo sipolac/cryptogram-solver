@@ -168,7 +168,12 @@ class Solver:
         best_mapping = mapping
         best_score = self.score(encrypted)
 
-        for epoch, (temp, n_swaps) in tqdm(enumerate(zip(temps, n_swap_list)), total=num_epochs):
+        decrypt_tqdm = tqdm(
+            enumerate(zip(temps, n_swap_list)),
+            total=num_epochs,
+            desc='decrypting'
+        )
+        for epoch, (temp, n_swaps) in decrypt_tqdm:
 
             new_mapping = mapping.random_swap(n_swaps)
             new_text = new_mapping.translate(encrypted)
@@ -245,9 +250,9 @@ def main(
         )
         slv = Solver(tokenizer, vocab_size, pseudo_count)
 
-        logger.info('reading data for training solver...')
+        print('reading data for training solver...')
         docs = data.get_news_articles(n_docs)
-        logger.info('computing character and word frequencies...')
+        print('computing character and word frequencies...')
         slv.fit(docs)
 
         if dump_solver:
@@ -258,9 +263,8 @@ def main(
                 json.dump(jsonify_totals(slv.totals), f)
 
     encrypted = slv.encrypt(text)
-    logger.info('decrypting...')
     decrypted = slv.decrypt(encrypted, num_epochs)
-    logger.info(f'decrypted text: {decrypted}')
+    print(f'decrypted text:\n{decrypted}')
     return decrypted
 
 
