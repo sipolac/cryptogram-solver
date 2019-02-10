@@ -10,13 +10,21 @@ from collections import Counter, defaultdict, namedtuple
 from math import exp, log
 from random import sample, uniform
 from string import ascii_lowercase as LETTERS
+import json
 import logging
+import pickle
 import re
 
 from tqdm import tqdm
 
 from cryptogram_solver import data
 from cryptogram_solver import utils
+
+
+PROJECT_DIR = utils.get_project_dir()
+tokenizer_path = PROJECT_DIR / 'models' / 'tokenizer.pkl'
+vocab_path = PROJECT_DIR / 'models' / 'vocab.json'
+totals_path = PROJECT_DIR / 'models' / 'totals.json'
 
 
 Token = namedtuple('Token', 'ngrams kind n')
@@ -42,7 +50,7 @@ class Mapping:
 
 
 class Tokenizer:
-    def __init__(self, char_ngram_range=(2, 3), word_ngram_range=(1, 1)):
+    def __init__(self, char_ngram_range, word_ngram_range):
         self.char_ngram_range = char_ngram_range
         self.word_ngram_range = word_ngram_range
 
@@ -87,6 +95,8 @@ class Solver:
         tokenizer,
         vocab_size,
         pseudo_count,
+        vocab=None,
+        totals=None,
         logger=None
     ):
         self.logger = logger or logging.getLogger(__name__)
@@ -95,8 +105,8 @@ class Solver:
         self.tokenizer = tokenizer
         self.pseudo_count = pseudo_count
 
-        self.vocab = None
-        self.totals = None
+        self.vocab = vocab
+        self.totals = totals
 
     def fit(self, texts):
         """Compute token probabilities from data.
@@ -188,30 +198,64 @@ def clean_text(text):
     return text.lower()
 
 
+def jsonify_vocab(vocab):
+    return [[list(t), c] for t, c in vocab.items()]
+
+
+def unjsonify_vocab(vocab):
+    return {Token(tuple(t[0]), t[1], t[2]): c for t, c in vocab}
+
+
+def jsonify_totals(totals):
+    return list(totals.items())
+
+
+def unjsonify_totals(totals):
+    return {tuple(t): c for t, c in totals}
+
+
 def main(
     text,
     num_epochs,
-    char_ngram_range,
-    word_ngram_range,
-    vocab_size,
-    n_docs,
-    pseudo_count,
+    char_ngram_range=None,
+    word_ngram_range=None,
+    vocab_size=None,
+    n_docs=None,
+    pseudo_count=None,
+    load_solver=False,
+    dump_solver=False,
     log_level='INFO'
 ):
     log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     logging.basicConfig(level=log_level, format=log_fmt)
     logger = logging.getLogger(__name__)
 
-    tokenizer = Tokenizer(
-        char_ngram_range=char_ngram_range,
-        word_ngram_range=word_ngram_range
-    )
-    slv = Solver(tokenizer, vocab_size, pseudo_count)
+    if load_solver:
+        tokenizer = pickle.load(open(tokenizer_path, 'rb'))
+        with open(vocab_path) as f:
+            vocab = unjsonify_vocab(json.load(f))
+        with open(totals_path) as f:
+            totals = unjsonify_totals(json.load(f))
+        slv = Solver(tokenizer, len(vocab), pseudo_count, vocab, totals)
 
-    logger.info('reading data for training solver...')
-    docs = data.get_news_articles()
-    logger.info('computing character and word frequencies...')
-    slv.fit(docs[:n_docs])
+    else:
+        tokenizer = Tokenizer(
+            char_ngram_range=char_ngram_range,
+            word_ngram_range=word_ngram_range
+        )
+        slv = Solver(tokenizer, vocab_size, pseudo_count)
+
+        logger.info('reading data for training solver...')
+        docs = data.get_news_articles(n_docs)
+        logger.info('computing character and word frequencies...')
+        slv.fit(docs)
+
+        if dump_solver:
+            pickle.dump(tokenizer, open(tokenizer_path, 'wb'))
+            with open(vocab_path, 'w') as f:
+                json.dump(jsonify_vocab(slv.vocab), f)
+            with open(totals_path, 'w') as f:
+                json.dump(jsonify_totals(slv.totals), f)
 
     encrypted = slv.encrypt(text)
     logger.info('decrypting...')
@@ -225,9 +269,9 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-t', '--text', help='text to be decrypted')
+    parser.add_argument('text', help='text to be decrypted')
     parser.add_argument(
-        '-e', '--num_epochs', default=10000,
+        '-e', '--num_epochs', default=10000, type=int,
         help='number of epochs during simulated annealing process'
     )
     parser.add_argument(
@@ -239,16 +283,24 @@ if __name__ == '__main__':
         help='range of word n-grams to use in tokenization'
     )
     parser.add_argument(
-        '-b', '--vocab_size', default=10000,
+        '-b', '--vocab_size', default=10000, type=int,
         help='size of vocabulary to use for scoring (other words are OOV)'
     )
     parser.add_argument(
-        '-d', '--n_docs', default=100,
+        '-n', '--n_docs', default=1000, type=int,
         help='number of documents used to estimate token frequencies'
     )
     parser.add_argument(
-        '-p', '--pseudo_count', default=1,
+        '-p', '--pseudo_count', default=1, type=float,
         help='number added to all token frequencies for smoothing'
+    )
+    parser.add_argument(
+        '-l', '--load_solver', action='store_true', default=False,
+        help='load pickled solver to save time'
+    )
+    parser.add_argument(
+        '-d', '--dump_solver', action='store_true', default=False,
+        help='dump pickled solver for use later'
     )
     parser.add_argument(
         '-v', '--verbose', action='count', default=0,
@@ -267,5 +319,7 @@ if __name__ == '__main__':
         vocab_size=args.vocab_size,
         n_docs=args.n_docs,
         pseudo_count=args.pseudo_count,
+        load_solver=args.load_solver,
+        dump_solver=args.dump_solver,
         log_level=log_level
     )
