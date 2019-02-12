@@ -10,6 +10,7 @@ from collections import Counter, defaultdict, namedtuple
 from math import exp, log
 from random import sample, uniform
 from string import ascii_lowercase as LETTERS
+import argparse
 import json
 import logging
 import pickle
@@ -25,6 +26,7 @@ PROJECT_DIR = utils.get_project_dir()
 tokenizer_path = PROJECT_DIR / 'models' / 'tokenizer.pkl'
 vocab_path = PROJECT_DIR / 'models' / 'vocab.json'
 totals_path = PROJECT_DIR / 'models' / 'totals.json'
+pseudo_count_path = PROJECT_DIR / 'models' / 'pseudo_count.txt'
 
 
 Token = namedtuple('Token', 'ngrams kind n')
@@ -47,6 +49,19 @@ class Mapping:
     def translate(self, text):
         trans = str.maketrans(self.key, LETTERS)
         return text.translate(trans)
+
+    def print_pretty(self):
+        # Order by original letters.
+        lst1 = [f'{l} --> {k.upper()}' for l, k in zip(LETTERS, self.key)]
+
+        # Order by key.
+        idx = sorted(range(len(self.key)), key=self.key.__getitem__)
+        lst2 = [f'{LETTERS[i]} --> {self.key[i].upper()}' for i in idx]
+
+        # Combine to show both.
+        lst = [f'{l1}    {l2}' for l1, l2 in zip(lst1, lst2)]
+
+        print(*lst, sep='\n')
 
 
 class Tokenizer:
@@ -196,7 +211,28 @@ class Solver:
                 ))
 
         decrypted = mapping.translate(encrypted)
-        return decrypted
+        return {'mapping': mapping, 'decrypted': decrypted}
+
+
+def save_solver_fn(slv, tokenizer_path, vocab_path, totals_path):
+    pickle.dump(slv.tokenizer, open(tokenizer_path, 'wb'))
+    with open(vocab_path, 'w') as f:
+        json.dump(jsonify_vocab(slv.vocab), f)
+    with open(totals_path, 'w') as f:
+        json.dump(jsonify_totals(slv.totals), f)
+    pseudo_count_path.write_text(str(slv.pseudo_count))
+
+
+def load_solver_fn():
+    # Solver can be reconstructed from the the vocab, totals and tokenizer.
+    tokenizer = pickle.load(open(tokenizer_path, 'rb'))
+    pseudo_count = int(pseudo_count_path.read_text())
+    with open(vocab_path) as f:
+        vocab = unjsonify_vocab(json.load(f))
+    with open(totals_path) as f:
+        totals = unjsonify_totals(json.load(f))
+    slv = Solver(tokenizer, len(vocab), pseudo_count, vocab, totals)
+    return slv
 
 
 def clean_text(text):
@@ -219,7 +255,7 @@ def unjsonify_totals(totals):
     return {tuple(t): c for t, c in totals}
 
 
-def main(
+def run_solver(
     text,
     num_epochs,
     char_ngram_range=None,
@@ -228,20 +264,11 @@ def main(
     n_docs=None,
     pseudo_count=None,
     load_solver=False,
-    dump_solver=False,
-    log_level='INFO'
+    save_solver=False,
+    logger=None
 ):
-    log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    logging.basicConfig(level=log_level, format=log_fmt)
-    logger = logging.getLogger(__name__)
-
     if load_solver:
-        tokenizer = pickle.load(open(tokenizer_path, 'rb'))
-        with open(vocab_path) as f:
-            vocab = unjsonify_vocab(json.load(f))
-        with open(totals_path) as f:
-            totals = unjsonify_totals(json.load(f))
-        slv = Solver(tokenizer, len(vocab), pseudo_count, vocab, totals)
+        slv = load_solver_fn()
 
     else:
         tokenizer = Tokenizer(
@@ -255,22 +282,18 @@ def main(
         print('computing character and word frequencies...')
         slv.fit(docs)
 
-        if dump_solver:
-            pickle.dump(tokenizer, open(tokenizer_path, 'wb'))
-            with open(vocab_path, 'w') as f:
-                json.dump(jsonify_vocab(slv.vocab), f)
-            with open(totals_path, 'w') as f:
-                json.dump(jsonify_totals(slv.totals), f)
+        if save_solver:
+            save_solver_fn(slv, tokenizer_path, vocab_path, totals_path)
 
-    encrypted = slv.encrypt(text)
-    decrypted = slv.decrypt(encrypted, num_epochs)
-    print(f'decrypted text:\n{decrypted}')
+    res = slv.decrypt(text, num_epochs)
+    mapping, decrypted = res['mapping'], res['decrypted']
+    print('\nmapping:')
+    mapping.print_pretty()
+    print(f'\ndecrypted text:\n{decrypted}')
     return decrypted
 
 
-if __name__ == '__main__':
-
-    import argparse
+def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('text', help='text to be decrypted')
@@ -300,11 +323,11 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '-l', '--load_solver', action='store_true', default=False,
-        help='load pickled solver to save time'
+        help='load solver to save time'
     )
     parser.add_argument(
-        '-d', '--dump_solver', action='store_true', default=False,
-        help='dump pickled solver for use later'
+        '-s', '--save_solver', action='store_true', default=False,
+        help='save solver for use later'
     )
     parser.add_argument(
         '-v', '--verbose', action='count', default=0,
@@ -315,7 +338,11 @@ if __name__ == '__main__':
     args.verbose = min(args.verbose, 1)
     log_level = {0: 'INFO', 1: 'DEBUG'}.get(args.verbose, 0)
 
-    main(
+    log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    logging.basicConfig(level=log_level, format=log_fmt)
+    logger = logging.getLogger(__name__)
+
+    run_solver(
         text=args.text,
         num_epochs=args.num_epochs,
         char_ngram_range=args.char_ngram_range,
@@ -324,6 +351,10 @@ if __name__ == '__main__':
         n_docs=args.n_docs,
         pseudo_count=args.pseudo_count,
         load_solver=args.load_solver,
-        dump_solver=args.dump_solver,
-        log_level=log_level
+        save_solver=args.save_solver,
+        logger=logger
     )
+
+
+if __name__ == '__main__':
+    main()
