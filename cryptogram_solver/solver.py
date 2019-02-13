@@ -289,7 +289,7 @@ def run_solver(
 
     res = slv.decrypt(text, num_epochs)
     mapping, decrypted = res['mapping'], res['decrypted']
-    print('\nmapping:')
+    print('\ncipher:')
     mapping.print_pretty()
     print(f'\ndecrypted text:\n{decrypted}')
     return decrypted
@@ -325,11 +325,11 @@ def main():
     )
     parser.add_argument(
         '-l', '--load_solver', action='store_true', default=False,
-        help='load solver to save time'
+        help='load pre-fitted solver'
     )
     parser.add_argument(
         '-s', '--save_solver', action='store_true', default=False,
-        help='save solver for use later'
+        help='save fitted solver for use later'
     )
     parser.add_argument(
         '-v', '--verbose', action='count', default=0,
