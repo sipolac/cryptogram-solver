@@ -72,17 +72,19 @@ But having a computer solve this is tricky.  You can't brute-force your way thro
 
 # Approach
 
-For decryption, I use an optimization technique called [simulated annealing](https://en.wikipedia.org/wiki/Simulated_annealing). In my particular implementation, I swap random letters in the mapping and re-score the text, where the score is the negative log likelihood of the token frequencies. I use [softmax](https://en.wikipedia.org/wiki/Softmax_function) on the difference of the scores of the current text and new text to determine whether I want to keep the new mapping. Better mappings are more likely to be kept, but I'm *open to accepting worse mappings* for the sake of escaping local minima. Over time, I decrease the "temperature" softmax parameter and decrease the number of swaps per iteration so that I'm increasingly likely to accept the mappings that improve the score.
+For decryption, I use an optimization technique called [simulated annealing](https://en.wikipedia.org/wiki/Simulated_annealing). The algorithm is run for a pre-defined number of iterations, where in each iteration I swap random letters in the mapping and re-score the text. The score is the negative log likelihood of the token frequencies. I use [softmax](https://en.wikipedia.org/wiki/Softmax_function) on the difference of the scores of the current text and new text to determine whether I want to keep the new mapping. Better mappings are more likely to be kept, but I'm *open to accepting worse mappings* for the sake of escaping local minima. Over time, I decrease the "temperature" softmax parameter and decrease the number of swaps per iteration so that I'm increasingly likely to accept the mappings that improve the score.
 
 Here's the Python-style pseudo(-ish)code for simulated annealing algorithm.
 
 ```python
-def simulated_annealing(encrypted):
+def simulated_annealing(encrypted, num_iters):
     mapping = Mapping()
     best_mapping = mapping
     best_score = score(encrypted)
 
-    for temp, swaps in zip(temp_list, swap_list):
+    for i in range(num_iters):
+        temp = temp_list[i]  # defined beforehand
+        swaps = swap_list[i]
 
         new_mapping = mapping.random_swap(swaps)
         new_text = new_mapping.translate(encrypted)
@@ -100,11 +102,17 @@ def simulated_annealing(encrypted):
     return mapping, decrypted
 ```
 
+My approach differs from typical statistical approaches \[1\]in a few ways:
+1. I use a tokenizer that's is mix of both words and characters, so scoring is presumably more fluid. (**TODO**: Explain this better, and also how probabilities are computed by token type (n-gram and kind) meaning their types are weighted appropriately. Also explain that this lets you use less data for computing frequencies.)
+1. I include an additional problem-specific simulated annealing parameter: the number of swaps in the mapping per iteration. That is, in the beginning of the optimization, you can swap more letters per iteration instead of just two. But as you near the end of the optimization, the number of swaps decreases and you're left only able to swap two letters.
+1. I allow the user to compute frequencies from any data source as opposed to using a pre-computed list of bigram frequencies (for example).
+1. I let the user define these parameters as they desire.
+
 The tokenization works as follows.
 
 ```python
 >>> from cryptogram_solver import solver
->>> tk = solver.Tokenizer((2, 3), (1, 1))
+>>> tk = solver.Tokenizer(char_ngram_range=(2, 3), word_ngram_range=(1, 1))
 >>> tokens = tk.tokenize('Hello world!')
 >>> print(*tokens, sep='\n')
 Token(ngrams=('hello',), kind='word', n=1)
@@ -133,15 +141,10 @@ Token(ngrams=('r', 'l', 'd'), kind='char', n=3)
 Token(ngrams=('l', 'd', '>'), kind='char', n=3)
 ```
 
-I preferred this approach to a dictionary-based approach. In a dictionary-based approach, you use a pre-built dictionary to solve the puzzle recursively. I find that for my tastes, these dictionary-based approaches rely too heavily on the dictionary and don't consider information that could be useful for solving the problem (e.g., character n-gram frequencies). Also, it isn't clear to me whether a more comprehensive dictionary is necessarily better for the candidate generation process; that is, a more comprehensive dictionary may let you generate more candidates (so your "[recall](https://en.wikipedia.org/wiki/Precision_and_recall)" is higher), but these candidates are more likely to be of lower quality and may slow down the algorithm with little benefit.
+I preferred this approach to a dictionary-based approach. In a dictionary-based approach, you use a pre-built dictionary to solve the puzzle recursively \[2\]. I find that for my tastes, these dictionary-based approaches rely too heavily on the dictionary and don't consider information that could be useful for solving the problem (e.g., character n-gram frequencies). Also, it isn't clear to me whether a more comprehensive dictionary is necessarily better for the candidate generation process; that is, a more comprehensive dictionary may let you generate more candidates (so your "[recall](https://en.wikipedia.org/wiki/Precision_and_recall)" is higher), but these candidates are more likely to be of lower quality and may slow down the algorithm with little benefit.
 
 You can try both approaches (statistical and dictionary) on [quipqiup.com](https://quipqiup.com/), created by University of Michigan professor [Edwin Olson](https://april.eecs.umich.edu/people/ebolson/). Olsen's implementations result in solve times that are pretty similar.
 
-My approach differs from typical statistical approaches in a few ways:
-1. I use a tokenizer that's is mix of both words and characters, so scoring is presumably more fluid. (**TODO**: Explain this better, and also how probabilities are computed by token type (n-gram and kind) meaning their types are weighted appropriately. Also explain that this lets you use less data for computing frequencies.)
-1. I include an additional problem-specific simulated annealing parameter: the number of swaps in the mapping per iteration. That is, in the beginning of the optimization, you can swap more letters per iteration instead of just two. But as you near the end of the optimization, the number of swaps decreases and you're left only able to swap two letters.
-1. I allow the user to compute frequencies from any data source as opposed to using a pre-computed list of bigram frequencies (for example).
-1. I let the user define these parameters as they desire.
 
 **TODO: EXPLAIN THIS BETTER**
 

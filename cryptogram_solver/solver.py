@@ -179,23 +179,20 @@ class Solver:
             self.cfg['log_temp_end'],
             num_iters
         )
-        temps = map(exp, log_temps)  # has an exponential curve
+        temps = [exp(x) for x in log_temps]  # has an exponential curve
         swap_list_floats = utils.linspace(
             self.cfg['swaps_start'],
             self.cfg['swaps_end'],
             num_iters
         )
-        swap_list = map(round, swap_list_floats)
+        swap_list = [round(x) for x in swap_list_floats]
 
         best_mapping = mapping
         best_score = self.score(encrypted)
 
-        decrypt_tqdm = tqdm(
-            enumerate(zip(temps, swap_list)),
-            total=num_iters,
-            desc='decrypting'
-        )
-        for i, (temp, swaps) in decrypt_tqdm:
+        for i in tqdm(list(range(num_iters)), desc='decrypting'):
+            temp = temps[i]
+            swaps = swap_list[i]
 
             new_mapping = mapping.random_swap(swaps)
             new_text = new_mapping.translate(encrypted)
