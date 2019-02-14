@@ -2,8 +2,6 @@
 
 Solver for [cryptograms](https://en.wikipedia.org/wiki/Cryptogram) (substitution ciphers).
 
-The basic syntax is `python solver.py <CRYPTOGRAM TEXT>`, as shown below. This gives both the cipher and the decyphered text. The `-l` argument loads a pre-fitted solver instead of computing token frequencies from raw data again. The cipher is shown twice: first it's ordered by the original letters and second by the encrypted letters.
-
 ![](references/demo.gif)
 
 
@@ -119,12 +117,11 @@ You can think of score as error, so a lower score is better.
 
 For the optimization algorithm, I use [simulated annealing](https://en.wikipedia.org/wiki/Simulated_annealing). The algorithm is run for a pre-defined number of iterations, where in each iteration I swap random letters in the mapping and re-score the text. I use [softmax](https://en.wikipedia.org/wiki/Softmax_function) on the difference of the scores of the current text and new text to determine whether I want to keep the new mapping. Better mappings are more likely to be kept, but I'm *open to accepting worse mappings* for the sake of escaping local minima. Over time, I decrease a softmax parameter called temperature and decrease the number of swaps per iteration so that I'm increasingly likely to accept the mappings that improve the score.
 
-My intuition tells me that character n-grams do the heavy lifting for most of the optimization (see section below), but the word n-grams help the algorithm "lock in" on good mappings at the end.
-
-Here's the Python-style pseudo(-ish)code for simulated annealing algorithm.
+My intuition tells me that character n-grams do the heavy lifting for most of the optimization, while the word n-grams help the algorithm "lock in" on good mappings at the end.
 
 ```python
 def simulated_annealing(encrypted, num_iters):
+    """Python-style pseudo(-ish)code for simulated annealing algorithm."""
     mapping = Mapping()
     best_mapping = mapping
     best_score = score(encrypted)
