@@ -21,8 +21,7 @@ def main():
     random.seed(1234)
     with open(quotes_path) as f:
         quotes = f.read()
-    slv = solver.Solver(None, None, None)
-    quotes_encrypted = slv.encrypt(quotes).upper()
+    quotes_encrypted = solver.encrypt(quotes)
     with open(quotes_encrypted_path, 'w') as f:
         f.write(quotes_encrypted)
 

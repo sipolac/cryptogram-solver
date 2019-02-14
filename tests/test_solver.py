@@ -13,7 +13,7 @@ from cryptogram_solver import solver
 
 
 def test_simple_cryptogram():
-    encrypted_raw = (
+    encrypted = (
         'KGQU GO QRKK FQ JUWRCN. DFCGSU GC. OPUKK CYU VWGD, WDX '
         'QUUK CYU LGDX. KGTU NFRV KGQU CF CYU QRKKUOC ZFCUDCGWK, '
         'WDX QGEYC QFV NFRV XVUWPO. NFR WVU CYU SUDCUV FQ NFRV '
@@ -31,13 +31,22 @@ def test_simple_cryptogram():
         char_ngram_range=(2, 3),
         word_ngram_range=(1, 1)
     )
-    slv = solver.Solver(tokenizer, vocab_size=10000, pseudo_count=1)
+    slv = solver.Solver(
+        tokenizer,
+        cfg=dict(
+            vocab_size=10000,
+            pseudo_count=1,
+            log_temp_start=0,
+            log_temp_end=-6,
+            swaps_start=3,
+            swaps_end=1
+        )
+    )
 
     # Train solver.
     docs = data.get_news_articles()
     slv.fit(docs[:100])
 
     # Test on text.
-    encrypted = solver.clean_text(encrypted_raw)
-    decrypted = slv.decrypt(encrypted, 10000)
+    decrypted = slv.decrypt(encrypted, 10000)['decrypted']
     assert decrypted_expected == decrypted
