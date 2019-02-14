@@ -72,43 +72,9 @@ But having a computer solve this is tricky.  You can't brute-force your way thro
 
 # Approach
 
-For decryption, I use an optimization technique called [simulated annealing](https://en.wikipedia.org/wiki/Simulated_annealing). The algorithm is run for a pre-defined number of iterations, where in each iteration I swap random letters in the mapping and re-score the text. The score is the negative log likelihood of the token frequencies. I use [softmax](https://en.wikipedia.org/wiki/Softmax_function) on the difference of the scores of the current text and new text to determine whether I want to keep the new mapping. Better mappings are more likely to be kept, but I'm *open to accepting worse mappings* for the sake of escaping local minima. Over time, I decrease the "temperature" softmax parameter and decrease the number of swaps per iteration so that I'm increasingly likely to accept the mappings that improve the score.
+## Tokenizer
 
-Here's the Python-style pseudo(-ish)code for simulated annealing algorithm.
-
-```python
-def simulated_annealing(encrypted, num_iters):
-    mapping = Mapping()
-    best_mapping = mapping
-    best_score = score(encrypted)
-
-    for i in range(num_iters):
-        temp = temp_list[i]  # defined beforehand
-        swaps = swap_list[i]
-
-        new_mapping = mapping.random_swap(swaps)
-        new_text = new_mapping.translate(encrypted)
-        score = score(new_text)
-
-        score_change = score - best_score
-
-        if exp(-score_change / temp) > uniform(0, 1):
-            best_mapping = new_mapping
-            best_score = score
-
-        mapping = best_mapping
-
-    decrypted = mapping.translate(encrypted)
-    return mapping, decrypted
-```
-
-My approach differs from typical statistical approaches \[1\]in a few ways:
-1. I use a tokenizer that's is mix of both words and characters, so scoring is presumably more fluid. (**TODO**: Explain this better, and also how probabilities are computed by token type (n-gram and kind) meaning their types are weighted appropriately. Also explain that this lets you use less data for computing frequencies.)
-1. I include an additional problem-specific simulated annealing parameter: the number of swaps in the mapping per iteration. That is, in the beginning of the optimization, you can swap more letters per iteration instead of just two. But as you near the end of the optimization, the number of swaps decreases and you're left only able to swap two letters.
-1. I allow the user to compute frequencies from any data source as opposed to using a pre-computed list of bigram frequencies (for example).
-1. I let the user define these parameters as they desire.
-
-The tokenization works as follows.
+I use a tokenizer that can generate both character n-grams and word n-grams. The code example below shows how the tokenizer creates character bigrams and trigrams as well as word unigrams.
 
 ```python
 >>> from cryptogram_solver import solver
@@ -141,23 +107,61 @@ Token(ngrams=('r', 'l', 'd'), kind='char', n=3)
 Token(ngrams=('l', 'd', '>'), kind='char', n=3)
 ```
 
-I preferred this approach to a dictionary-based approach. In a dictionary-based approach, you use a pre-built dictionary to solve the puzzle recursively \[2\]. I find that for my tastes, these dictionary-based approaches rely too heavily on the dictionary and don't consider information that could be useful for solving the problem (e.g., character n-gram frequencies). Also, it isn't clear to me whether a more comprehensive dictionary is necessarily better for the candidate generation process; that is, a more comprehensive dictionary may let you generate more candidates (so your "[recall](https://en.wikipedia.org/wiki/Precision_and_recall)" is higher), but these candidates are more likely to be of lower quality and may slow down the algorithm with little benefit.
+
+## Scoring
+
+To compare possible decryptions, I use the negative log likelihood of the token probabilities. Token probabilities are computed by token "type" (word/character and n-gram count combination). For example, to compute the probability of a character bigram, I divide the frequency of that bigram by the total number of character bigrams. This is done when "fitting" the solver to data (see `Solver.fit()`).
+
+You can think of score as error, so a lower score is better.
+
+
+## Optimization
+
+For the optimization algorithm, I use [simulated annealing](https://en.wikipedia.org/wiki/Simulated_annealing). The algorithm is run for a pre-defined number of iterations, where in each iteration I swap random letters in the mapping and re-score the text. I use [softmax](https://en.wikipedia.org/wiki/Softmax_function) on the difference of the scores of the current text and new text to determine whether I want to keep the new mapping. Better mappings are more likely to be kept, but I'm *open to accepting worse mappings* for the sake of escaping local minima. Over time, I decrease a softmax parameter called temperature and decrease the number of swaps per iteration so that I'm increasingly likely to accept the mappings that improve the score.
+
+My intuition tells me that character n-grams do the heavy lifting for most of the optimization (see section below), but the word n-grams help the algorithm "lock in" on good mappings at the end.
+
+Here's the Python-style pseudo(-ish)code for simulated annealing algorithm.
+
+```python
+def simulated_annealing(encrypted, num_iters):
+    mapping = Mapping()
+    best_mapping = mapping
+    best_score = score(encrypted)
+
+    for i in range(num_iters):
+        temp = temp_list[i]  # defined beforehand
+        swaps = swap_list[i]
+
+        new_mapping = mapping.random_swap(swaps)
+        new_text = new_mapping.translate(encrypted)
+        score = score(new_text)
+
+        score_change = score - best_score
+
+        if exp(-score_change / temp) > uniform(0, 1):
+            best_mapping = new_mapping
+            best_score = score
+
+        mapping = best_mapping
+
+    decrypted = mapping.translate(encrypted)
+    return mapping, decrypted
+```
+
+## Alternative approach
+
+I preferred this approach to a dictionary-based approach. In a dictionary-based approach, you use a pre-built dictionary to solve the cryptogram recursively. I decided not to go with this approach for a few reasons:
+1. It relies too heavily on the dictionary and doesn't consider information that could be useful for solving the problem (e.g., character n-gram frequencies).
+1. It isn't clear to me whether a more comprehensive dictionary is necessarily better for the candidate generation process. that is, a more comprehensive dictionary may let you generate more candidates (so your "[recall](https://en.wikipedia.org/wiki/Precision_and_recall)" is higher), but these candidates are more likely to be of lower quality and may slow down the algorithm with little benefit.
+1. It just isn't as theoretically interesting as simulated annealing.
 
 You can try both approaches (statistical and dictionary) on [quipqiup.com](https://quipqiup.com/), created by University of Michigan professor [Edwin Olson](https://april.eecs.umich.edu/people/ebolson/). Olsen's implementations result in solve times that are pretty similar.
 
 
-**TODO: EXPLAIN THIS BETTER**
-
-
-
-\[1\] E.g., [Invent with Python, Chapter 18](https://inventwithpython.com/hacking/chapter18.html) or [aquach's cryptogram-solver GitHub project](https://github.com/aquach/cryptogram-solver)
-
-\[2\] E.g., [theikkila's substitution-cipher-SA-solver GitHub project](https://github.com/theikkila/substitution-cipher-SA-solver)
-
-
 # OTHER TODOS
-- Finish this README!
-- Create function for preprocessing data.
-- Use random search to find better set of parameters.
-- See if pre-computing log probabilities results in a significant speedup.
-- See if turning tokens into joined strings speeds things up.
+1. Create function for preprocessing data.
+1. Use random search to find better set of parameters.
+1. See if pre-computing log probabilities results in a significant speedup.
+1. See if turning tokens into joined strings speeds things up.
+1. Finish this README!
