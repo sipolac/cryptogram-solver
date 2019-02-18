@@ -252,7 +252,7 @@ class Solver:
 def encrypt(text):
     mapping = Mapping()
     mapping.scramble()
-    encrypted = mapping.translate(text).upper()
+    encrypted = mapping.translate(text.lower()).upper()
     return encrypted
 
 
@@ -276,10 +276,6 @@ def run_solver(
         slv = Solver.load(models_path)
 
     else:
-        tokenizer = Tokenizer(
-            char_ngram_range=cfg['char_ngram_range'],
-            word_ngram_range=cfg['word_ngram_range']
-        )
         slv = Solver(cfg)
 
         print('reading data for training solver...')

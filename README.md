@@ -70,9 +70,9 @@ Let's go with [Wikipedia's definition](https://en.wikipedia.org/wiki/Cryptogram)
 
 For example, let's say you're given the puzzle below.
 
-> "INDVSODTSBO LDF VSHYO TB NDO TB EBNRYOFDTY KSN PBX LKDT KY SF OBT, DOC D FYOFY BP KZNBX LDF RXBHSCYC TB EBOFBJY KSN PBX LKDT KY SF." -OFEDX WSJCY
+> "SNDVSODTSBO LDF VSHYO TB NDO TB EBNRYOFDTY KSN PBX LKDT KY SF OBT, DOC D FYOFY BP KZNBX LDF RXBHSCYC TB EBOFBJY KSN PBX LKDT KY SF." -BFEDX LSJCY
  
- The goal is to realize that _m_'s were replaced with _N_'s, _a_'s with _D_'s, and so on for all the letters of the alphabet. Once you make all the correct substitutions, you get the following text.
+ The goal is to realize that _i_'s were replaced with _S_'s, _m_'s with _N_'s, and so on for all the letters of the alphabet. Once you make all the correct substitutions, you get the following text.
 
  > "Imagination was given to man to compensate him for what he is not, and a sense of humor was provided to console him for what he is." -Oscar Wilde
 
