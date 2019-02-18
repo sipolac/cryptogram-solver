@@ -26,16 +26,14 @@ def test_simple_cryptogram():
         'universe, and you can make anything happen.'
     )
 
-    slv = solver.Solver(
-        cfg=dict(
-            char_ngram_range=(2, 2),
-            word_ngram_range=(1, 1),
-            vocab_size=10000,
-            pseudo_count=1,
-        )
+    cfg = dict(
+        char_ngram_range=(2, 2),
+        word_ngram_range=(1, 1),
+        vocab_size=10000,
+        pseudo_count=1,
     )
+    slv = solver.Solver(cfg)
 
-    # Train solver.
     docs = data.get_news_articles()
     slv.fit(docs[:100])
 
@@ -45,7 +43,7 @@ def test_simple_cryptogram():
         num_iters=10000,
         log_temp_start=-1,
         log_temp_end=-6,
-        swaps_start=2,
-        swaps_end=1
+        lamb_start=0.5,
+        lamb_end=0
     )['decrypted']
     assert decrypted_expected == decrypted

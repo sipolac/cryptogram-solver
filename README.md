@@ -51,11 +51,11 @@ optional arguments:
 
 # Examples
 
-To fit a solver on 1000 documents (`-n 1000`) with a tokenizer that uses character trigrams (`-c 3 3`) and word unigrams (`-w 1 1`) with a max vocab size of 5000 (`-b 5000`), save it to file (`-s`) (right now just to `data/cache/`) , and solve the encrypted text (represented here as `<ENCRYPTED TEXT> `):
+To fit a solver on 1000 documents (`-n 1000`) with a tokenizer that uses character trigrams (`-c 3 3`) and word unigrams (`-w 1 1`) with a max vocab size of 5000 (`-b 5000`), save it to file (`-s`) (right now just to `data/cache/`), and solve the encrypted text (represented here as `<ENCRYPTED TEXT>`):
 
     python solver.py <ENCRYPTED TEXT> -n 1000 -c 3 3 -w 1 1 -b 5000 -s
 
-To load a fitted solver (`-l`) and run for 5000 iterations (`-i 5000`) with a starting lambda (for character swaps; see below) of 1 (`--lamb_start 1`) and verbose output (`-v`):
+To load a fitted solver (`-l`) and run the optimizer for 5000 iterations (`-i 5000`) with a starting lambda (for character swaps; see below) of 1 (`--lamb_start 1`) and verbose output (`-v`):
 
     python solver.py <ENCRYPTED TEXT> -l -i 5000 --lamb_start 1 -v
 
@@ -109,7 +109,7 @@ Token(ngrams=('l', 'o', '>'), kind='char', n=3)
 
 ## Scoring
 
-To score decryptions, I use the negative log likelihood of the token probabilities. Token probabilities are computed by token "type" (word/character and n-gram count combination). For example, to compute the probability of a character bigram, I divide the frequency of that bigram by the total number of character bigrams (and not, say, character trigrams or word unigrams). This is done when "fitting" the solver to data (see `Solver.fit()`).
+To score decryptions, I use the negative log likelihood of the token probabilities. Token probabilities are computed by token "type" (word/character and n-gram count combination). For example, to compute the probability of a character bigram, I divide the frequency of that bigram by the total number of character bigrams. This is done when "fitting" the solver to data (see `Solver.fit()`).
 
 You can think of score as error, so lower is better.
 
@@ -156,13 +156,6 @@ def schedule_swaps(lamb_start, lamb_end, n):
 ```
 
 where `lamb_start` is the starting lambda (at the beginning of the optimization), `lamb_end` is the ending lambda, `n` is the number of iterations in the optimization, `linspace` is a function that returns evenly spaced numbers over a specified interval (a basic version of [numpy's implementation](https://docs.scipy.org/doc/numpy/reference/generated/numpy.linspace.html)), and `poisson` is a function that draws a sample from a poisson distribution given a lambda parameter. Note that a lambda greater than zero gives you *additional* swaps; if `lamb_start` and `lamb_end` are both zero, then in every iteration you swap only once.
-
-
-## Alternative approach
-
-The main alternative to a statistical approach is a dictionary-based approach, where you solve recursively word-by-word—keeping track of all possibilities—and score using something like negative log likelihood. I didn't go down this route because I just found simulated annealing much more theoretically appealing.
-
-You can try both approaches (statistical and dictionary) on [quipqiup.com](https://quipqiup.com/), created by University of Michigan professor [Edwin Olson](https://april.eecs.umich.edu/people/ebolson/). Olsen's implementations result in solve times that are pretty similar.
 
 
 # Dependencies
