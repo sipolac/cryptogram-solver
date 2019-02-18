@@ -26,20 +26,12 @@ def test_simple_cryptogram():
         'universe, and you can make anything happen.'
     )
 
-    # Define tokenizer and solver.
-    tokenizer = solver.Tokenizer(
-        char_ngram_range=(2, 3),
-        word_ngram_range=(1, 1)
-    )
     slv = solver.Solver(
-        tokenizer,
         cfg=dict(
+            char_ngram_range=(2, 2),
+            word_ngram_range=(1, 1),
             vocab_size=10000,
             pseudo_count=1,
-            log_temp_start=0,
-            log_temp_end=-6,
-            swaps_start=3,
-            swaps_end=1
         )
     )
 
@@ -48,5 +40,12 @@ def test_simple_cryptogram():
     slv.fit(docs[:100])
 
     # Test on text.
-    decrypted = slv.decrypt(encrypted, 10000)['decrypted']
+    decrypted = slv.decrypt(
+        encrypted,
+        num_iters=10000,
+        log_temp_start=-1,
+        log_temp_end=-6,
+        swaps_start=2,
+        swaps_end=1
+    )['decrypted']
     assert decrypted_expected == decrypted
