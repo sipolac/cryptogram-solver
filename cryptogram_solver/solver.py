@@ -13,7 +13,6 @@ from string import ascii_lowercase as LETTERS
 import argparse
 import json
 import logging
-import pickle
 import re
 
 from tqdm import tqdm
@@ -101,26 +100,22 @@ class Tokenizer:
 
 
 class Solver:
-    def __init__(
-        self,
-        tokenizer,
-        cfg=dict(),  # configuration/parameters
-        logger=None
-    ):
+    def __init__(self, cfg=dict(), logger=None):
         self.logger = logger or logging.getLogger(__name__)
 
-        self.tokenizer = tokenizer
-
         self.cfg = dict(
+            char_ngram_range=None,
+            word_ngram_range=None,
             vocab_size=None,
-            pseudo_count=None,
-            log_temp_start=None,
-            log_temp_end=None,
-            swaps_start=None,
-            swaps_end=None
+            pseudo_count=None
         )
         assert all([k in self.cfg.keys() for k in cfg.keys()])
         self.cfg.update(cfg)
+
+        self.tokenizer = Tokenizer(
+            cfg['char_ngram_range'],
+            cfg['word_ngram_range']
+        )
 
         # These are defined when fitted.
         self.vocab = None
@@ -162,7 +157,15 @@ class Solver:
             nll += -1 * log_prob * count
         return nll / len(tokens)  # take mean
 
-    def decrypt(self, encrypted, num_iters):
+    def decrypt(
+        self,
+        encrypted,
+        num_iters,
+        log_temp_start,
+        log_temp_end,
+        lamb_start,
+        lamb_end
+    ):
         """Solve cryptogram using simulated annealing.
 
         This uses a pre-set scheduler for both temperature (from simulated
@@ -173,19 +176,8 @@ class Solver:
         encrypted = encrypted.lower()
         mapping = Mapping()
 
-        # Schedule temperature and number of letter swaps to be made.
-        log_temps = utils.linspace(
-            self.cfg['log_temp_start'],
-            self.cfg['log_temp_end'],
-            num_iters
-        )
-        temps = [exp(x) for x in log_temps]  # has an exponential curve
-        swap_list_floats = utils.linspace(
-            self.cfg['swaps_start'],
-            self.cfg['swaps_end'],
-            num_iters
-        )
-        swap_list = [round(x) for x in swap_list_floats]
+        temps = self._schedule_temp(log_temp_start, log_temp_end, num_iters)
+        swap_list = self._schedule_swaps(lamb_start, lamb_end, num_iters)
 
         best_mapping = mapping
         best_score = self.score(encrypted)
@@ -218,35 +210,42 @@ class Solver:
         return {'mapping': mapping, 'decrypted': decrypted}
 
     def save(self, path):
-        pickle.dump(self.tokenizer, open(path / 'tokenizer.pkl', 'wb'))
         with open(path / 'vocab.json', 'w') as f:
             json.dump(self._jsonify_vocab(self.vocab), f)
         with open(path / 'totals.json', 'w') as f:
             json.dump(self._jsonify_totals(self.totals), f)
         (path / 'cfg.json').write_text(json.dumps(self.cfg))
 
-    def load(path):
-        tokenizer = pickle.load(open(path / 'tokenizer.pkl', 'rb'))
+    @classmethod
+    def load(cls, path):
         cfg = json.loads((path / 'cfg.json').read_text())
         with open(path / 'vocab.json') as f:
-            vocab = Solver._unjsonify_vocab(json.load(f))
+            vocab = cls._unjsonify_vocab(json.load(f))
         with open(path / 'totals.json') as f:
-            totals = Solver._unjsonify_totals(json.load(f))
-        slv = Solver(tokenizer, cfg)
+            totals = cls._unjsonify_totals(json.load(f))
+        slv = cls(cfg)
         slv.vocab = vocab
         slv.totals = totals
         return slv
 
+    def _schedule_temp(self, start, end, n):
+        return [exp(x) for x in utils.linspace(start, end, n)]
+
+    def _schedule_swaps(self, start, end, n):
+        return [utils.poisson(l) + 1 for l in utils.linspace(start, end, n)]
+
     def _jsonify_vocab(self, vocab):
         return [[list(t), c] for t, c in vocab.items()]
 
-    def _unjsonify_vocab(vocab):
+    @classmethod
+    def _unjsonify_vocab(cls, vocab):
         return {Token(tuple(t[0]), t[1], t[2]): c for t, c in vocab}
 
     def _jsonify_totals(self, totals):
         return list(totals.items())
 
-    def _unjsonify_totals(totals):
+    @classmethod
+    def _unjsonify_totals(cls, totals):
         return {tuple(t): c for t, c in totals}
 
 
@@ -259,10 +258,12 @@ def encrypt(text):
 
 def run_solver(
     text,
-    num_iters=None,
-    char_ngram_range=None,
-    word_ngram_range=None,
     cfg=None,
+    num_iters=None,
+    log_temp_start=None,
+    log_temp_end=None,
+    lamb_start=None,
+    lamb_end=None,
     n_docs=None,
     load_solver=False,
     save_solver=False,
@@ -276,10 +277,10 @@ def run_solver(
 
     else:
         tokenizer = Tokenizer(
-            char_ngram_range=char_ngram_range,
-            word_ngram_range=word_ngram_range
+            char_ngram_range=cfg['char_ngram_range'],
+            word_ngram_range=cfg['word_ngram_range']
         )
-        slv = Solver(tokenizer, cfg)
+        slv = Solver(cfg)
 
         print('reading data for training solver...')
         docs = data.get_news_articles(n_docs)
@@ -287,7 +288,14 @@ def run_solver(
         if save_solver:
             slv.save(models_path)
 
-    res = slv.decrypt(text, num_iters)
+    res = slv.decrypt(
+        text,
+        num_iters,
+        log_temp_start,
+        log_temp_end,
+        lamb_start,
+        lamb_end
+    )
     mapping, decrypted = res['mapping'], res['decrypted']
     print('\ncipher:')
     mapping.print_pretty()
@@ -297,13 +305,16 @@ def run_solver(
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('text', help='text to be decrypted')
+    parser.add_argument(
+        'text',
+        help='text to be decrypted'
+    )
     parser.add_argument(
         '-i', '--num_iters', default=10000, type=int,
         help='number of iterations during simulated annealing process'
     )
     parser.add_argument(
-        '-c', '--char_ngram_range', nargs=2, default=(3, 3), type=int,
+        '-c', '--char_ngram_range', nargs=2, default=(2, 2), type=int,
         help='range of character n-grams to use in tokenization'
     )
     parser.add_argument(
@@ -331,12 +342,12 @@ def main():
         help='log of final temperature'
     )
     parser.add_argument(
-        '--swaps_start', default=2, type=int,
-        help='number of letter swaps made per iteration in beginning'
+        '--lamb_start', default=0.5, type=int,
+        help='poisson lambda for number of letter swaps in beginning'
     )
     parser.add_argument(
-        '--swaps_end', default=1, type=int,
-        help='number of letter swaps made per iteration at end'
+        '--lamb_end', default=0, type=int,
+        help='poisson lambda for number of letter swaps at end'
     )
     parser.add_argument(
         '-l', '--load_solver', action='store_true', default=False,
@@ -360,20 +371,20 @@ def main():
     logger = logging.getLogger(__name__)
 
     cfg = dict(
+        char_ngram_range=args.char_ngram_range,
+        word_ngram_range=args.word_ngram_range,
         vocab_size=args.vocab_size,
-        pseudo_count=args.pseudo_count,
-        log_temp_start=args.log_temp_start,
-        log_temp_end=args.log_temp_end,
-        swaps_start=args.swaps_start,
-        swaps_end=args.swaps_end
+        pseudo_count=args.pseudo_count
     )
 
     run_solver(
         text=args.text,
-        num_iters=args.num_iters,
-        char_ngram_range=args.char_ngram_range,
-        word_ngram_range=args.word_ngram_range,
         cfg=cfg,
+        num_iters=args.num_iters,
+        log_temp_start=args.log_temp_start,
+        log_temp_end=args.log_temp_end,
+        lamb_start=args.lamb_start,
+        lamb_end=args.lamb_end,
         n_docs=args.n_docs,
         load_solver=args.load_solver,
         save_solver=args.save_solver,
