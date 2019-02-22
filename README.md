@@ -162,7 +162,9 @@ where `lamb_start` is the starting lambda (at the beginning of the optimization)
 
 - [tqdm](https://github.com/tqdm/tqdm) for progress bars
 
+
 # TODOS
+1. Write script to download data. (And possibly change the data source.)
 1. Create function for preprocessing data.
 1. Use random search to find better set of parameters.
 1. See if pre-computing log probabilities results in a significant speedup.

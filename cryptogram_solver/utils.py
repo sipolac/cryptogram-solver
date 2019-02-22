@@ -30,7 +30,7 @@ def linspace(start, stop, num):
     return (start + step_size * i for i in range(num))
 
 
-def poisson(lamb):
+def rpoisson(lamb):
     """Generate random number from poisson distribution.
 
     Don't want to use scipy or numpy as a dependency. Make so that when
@@ -38,10 +38,12 @@ def poisson(lamb):
 
     https://en.wikipedia.org/wiki/Poisson_distribution#Generating_Poisson-distributed_random_variables
     """
+    if lamb == 0:
+        return 0
     L = exp(-lamb)
     k = 0
     p = 1
     while p > L:
         k += 1
         p *= uniform(0, 1)
-    return max(0, k - 1)
+    return k - 1

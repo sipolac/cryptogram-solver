@@ -103,14 +103,14 @@ class Solver:
     def __init__(self, cfg=dict(), logger=None):
         self.logger = logger or logging.getLogger(__name__)
 
-        self.cfg = dict(
+        # Set config of solver.
+        default_cfg = dict(
             char_ngram_range=None,
             word_ngram_range=None,
             vocab_size=None,
             pseudo_count=None
         )
-        assert all([k in self.cfg.keys() for k in cfg.keys()])
-        self.cfg.update(cfg)
+        self.cfg = self._impute_defaults(cfg, default_cfg)
 
         self.tokenizer = Tokenizer(
             cfg['char_ngram_range'],
@@ -210,6 +210,7 @@ class Solver:
         return {'mapping': mapping, 'decrypted': decrypted}
 
     def save(self, path):
+        path.mkdir(exist_ok=True)
         with open(path / 'vocab.json', 'w') as f:
             json.dump(self._jsonify_vocab(self.vocab), f)
         with open(path / 'totals.json', 'w') as f:
@@ -228,11 +229,18 @@ class Solver:
         slv.totals = totals
         return slv
 
+    def _impute_defaults(self, d, default_d):
+        assert all([k in default_d.keys() for k in d.keys()])
+        for k, v in default_d.items():
+            if k not in d:
+                d[k] = v
+        return d
+
     def _schedule_temp(self, start, end, n):
         return [exp(x) for x in utils.linspace(start, end, n)]
 
     def _schedule_swaps(self, start, end, n):
-        return [utils.poisson(l) + 1 for l in utils.linspace(start, end, n)]
+        return [utils.rpoisson(l) + 1 for l in utils.linspace(start, end, n)]
 
     def _jsonify_vocab(self, vocab):
         return [[list(t), c] for t, c in vocab.items()]
@@ -296,7 +304,7 @@ def run_solver(
     print('\ncipher:')
     mapping.print_pretty()
     print(f'\ndecrypted text:\n{decrypted}')
-    return decrypted
+    return res
 
 
 def main():
@@ -339,11 +347,17 @@ def main():
     )
     parser.add_argument(
         '--lamb_start', default=0.5, type=int,
-        help='poisson lambda for number of letter swaps in beginning'
+        help=(
+            'poisson lambda for number of additional letter swaps '
+            'in beginning; use 0 for single swaps'
+        )
     )
     parser.add_argument(
         '--lamb_end', default=0, type=int,
-        help='poisson lambda for number of letter swaps at end'
+        help=(
+            'poisson lambda for number of additional letter swaps '
+            'at end; use 0 for single swaps'
+        )
     )
     parser.add_argument(
         '-l', '--load_solver', action='store_true', default=False,

@@ -8,11 +8,51 @@ Basic test of the solver with a simple cryptogram.
 
 This cryptogram is simple enough that it should be solved almost every time.
 """
+import pytest
+
 from cryptogram_solver import data
 from cryptogram_solver import solver
+from cryptogram_solver import utils
 
 
-def test_simple_cryptogram():
+PROJECT_DIR = utils.get_project_dir()
+TEST_PATH = PROJECT_DIR / 'models' / 'test'
+
+
+@pytest.fixture
+def slv(scope='module'):
+    cfg = dict(
+        char_ngram_range=(2, 2),
+        word_ngram_range=(1, 1),
+        vocab_size=9999,
+        pseudo_count=1,
+    )
+    slv = solver.Solver(cfg)
+    docs = data.get_news_articles()
+    slv.fit(docs[:100])
+    return slv
+
+
+@pytest.fixture
+def decrypt_kwargs(scope='module'):
+    decrypt_kwargs = dict(
+        num_iters=10000,
+        log_temp_start=-1,
+        log_temp_end=-6,
+        lamb_start=0.5,
+        lamb_end=0
+    )
+    return decrypt_kwargs
+
+
+def test_solver_serialization(slv):
+    slv.save(TEST_PATH)
+    del slv  # to be explicit
+    slv = solver.Solver.load(TEST_PATH)
+    assert len(slv.vocab) == 9999
+
+
+def test_solver_simple_cryptogram(slv, decrypt_kwargs):
     encrypted = (
         'KGQU GO QRKK FQ JUWRCN. DFCGSU GC. OPUKK CYU VWGD, WDX '
         'QUUK CYU LGDX. KGTU NFRV KGQU CF CYU QRKKUOC ZFCUDCGWK, '
@@ -25,25 +65,5 @@ def test_simple_cryptogram():
         'and fight for your dreams. you are the center of your '
         'universe, and you can make anything happen.'
     )
-
-    cfg = dict(
-        char_ngram_range=(2, 2),
-        word_ngram_range=(1, 1),
-        vocab_size=10000,
-        pseudo_count=1,
-    )
-    slv = solver.Solver(cfg)
-
-    docs = data.get_news_articles()
-    slv.fit(docs[:100])
-
-    # Test on text.
-    decrypted = slv.decrypt(
-        encrypted,
-        num_iters=10000,
-        log_temp_start=-1,
-        log_temp_end=-6,
-        lamb_start=0.5,
-        lamb_end=0
-    )['decrypted']
+    decrypted = slv.decrypt(encrypted, **decrypt_kwargs)['decrypted']
     assert decrypted_expected == decrypted
