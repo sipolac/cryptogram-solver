@@ -11,36 +11,39 @@ This cryptogram is simple enough that it should be solved almost every time.
 import pytest
 
 from cryptogram_solver import data
+from cryptogram_solver import defaults
 from cryptogram_solver import solver
 from cryptogram_solver import utils
 
 
 PROJECT_DIR = utils.get_project_dir()
 TEST_PATH = PROJECT_DIR / 'models' / 'test'
+TEST_VOCAB_SIZE = 9999
+TEST_N_DOCS = 100
 
 
 @pytest.fixture
 def slv(scope='module'):
     cfg = dict(
-        char_ngram_range=(2, 2),
-        word_ngram_range=(1, 1),
-        vocab_size=9999,
-        pseudo_count=1,
+        char_ngram_range=defaults.CHAR_NGRAM_RANGE,
+        word_ngram_range=defaults.WORD_NGRAM_RANGE,
+        vocab_size=TEST_VOCAB_SIZE,
+        pseudo_count=defaults.PSEUDO_COUNT,
     )
     slv = solver.Solver(cfg)
     docs = data.get_news_articles()
-    slv.fit(docs[:100])
+    slv.fit(docs[:TEST_N_DOCS])
     return slv
 
 
 @pytest.fixture
 def decrypt_kwargs(scope='module'):
     decrypt_kwargs = dict(
-        num_iters=10000,
-        log_temp_start=-1,
-        log_temp_end=-6,
-        lamb_start=0.5,
-        lamb_end=0
+        num_iters=defaults.NUM_ITERS,
+        log_temp_start=defaults.LOG_TEMP_START,
+        log_temp_end=defaults.LOG_TEMP_END,
+        lamb_start=defaults.LAMB_START,
+        lamb_end=defaults.LAMB_END
     )
     return decrypt_kwargs
 
@@ -49,7 +52,7 @@ def test_solver_serialization(slv):
     slv.save(TEST_PATH)
     del slv  # to be explicit
     slv = solver.Solver.load(TEST_PATH)
-    assert len(slv.vocab) == 9999
+    assert len(slv.vocab) == TEST_VOCAB_SIZE
 
 
 def test_solver_simple_cryptogram(slv, decrypt_kwargs):

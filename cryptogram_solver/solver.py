@@ -19,6 +19,7 @@ from tqdm import tqdm
 
 from cryptogram_solver import data
 from cryptogram_solver import utils
+from cryptogram_solver import defaults
 
 
 PROJECT_DIR = utils.get_project_dir()
@@ -103,7 +104,8 @@ class Solver:
     def __init__(self, cfg=dict(), logger=None):
         self.logger = logger or logging.getLogger(__name__)
 
-        # Set config of solver.
+        # Set config of solver. Right now set defaults as None, but later
+        # can put in real default values.
         default_cfg = dict(
             char_ngram_range=None,
             word_ngram_range=None,
@@ -230,13 +232,14 @@ class Solver:
         return slv
 
     def _impute_defaults(self, d, default_d):
-        assert all([k in default_d.keys() for k in d.keys()])
+        assert all([k in default_d for k in d])
         for k, v in default_d.items():
             if k not in d:
                 d[k] = v
         return d
 
     def _schedule_temp(self, start, end, n):
+        # Return list instead of generator so you can subset later.
         return [exp(x) for x in utils.linspace(start, end, n)]
 
     def _schedule_swaps(self, start, end, n):
@@ -314,46 +317,48 @@ def main():
         help='text to be decrypted'
     )
     parser.add_argument(
-        '-i', '--num_iters', default=10000, type=int,
+        '-i', '--num_iters', default=defaults.NUM_ITERS, type=int,
         help='number of iterations during simulated annealing process'
     )
     parser.add_argument(
-        '-c', '--char_ngram_range', nargs=2, default=(2, 2), type=int,
+        '-c', '--char_ngram_range', nargs=2,
+        default=defaults.CHAR_NGRAM_RANGE, type=int,
         help='range of character n-grams to use in tokenization'
     )
     parser.add_argument(
-        '-w', '--word_ngram_range', nargs=2, default=(1, 1), type=int,
+        '-w', '--word_ngram_range', nargs=2,
+        default=defaults.WORD_NGRAM_RANGE, type=int,
         help='range of word n-grams to use in tokenization'
     )
     parser.add_argument(
-        '-n', '--n_docs', default=1000, type=int,
+        '-n', '--n_docs', default=defaults.N_DOCS, type=int,
         help='number of documents used to estimate token frequencies'
     )
     parser.add_argument(
-        '-b', '--vocab_size', default=10000, type=int,
+        '-b', '--vocab_size', default=defaults.VOCAB_SIZE, type=int,
         help='size of vocabulary to use for scoring'
     )
     parser.add_argument(
-        '-p', '--pseudo_count', default=1, type=float,
+        '-p', '--pseudo_count', default=defaults.PSEUDO_COUNT, type=float,
         help='number added to all token frequencies for smoothing'
     )
     parser.add_argument(
-        '--log_temp_start', default=-1, type=int,
+        '--log_temp_start', default=defaults.LOG_TEMP_START, type=int,
         help='log of initial temperature'
     )
     parser.add_argument(
-        '--log_temp_end', default=-6, type=int,
+        '--log_temp_end', default=defaults.LOG_TEMP_END, type=int,
         help='log of final temperature'
     )
     parser.add_argument(
-        '--lamb_start', default=0.5, type=int,
+        '--lamb_start', default=defaults.LAMB_START, type=int,
         help=(
             'poisson lambda for number of additional letter swaps '
             'in beginning; use 0 for single swaps'
         )
     )
     parser.add_argument(
-        '--lamb_end', default=0, type=int,
+        '--lamb_end', default=defaults.LAMB_END, type=int,
         help=(
             'poisson lambda for number of additional letter swaps '
             'at end; use 0 for single swaps'
