@@ -170,9 +170,9 @@ where `lamb_start` is the starting lambda (at the beginning of the optimization)
 
 The solver can be fitted using either a corpus of documents (as a text file) or a list of precomputed word unigram frequencies (as a CSV file). If using the unigram frequencies, the highest possible degree in your word n-gram range is 1.
 
-By default, I use news data found on Kaggle as my corpus, and I pre-compute unigram frequencies using `make_freqs.py`. If the user does not choose word n-grams higher than degree 1, I fit the solver on the pre-computed unigrams; otherwise, I fit on the corpus directly (which takes longer). But if you have a custom data source, you can fit the solver using that data by using either `--freqs_path` or `--docs_path`.
+By default, I use news data found on Kaggle as my corpus, and I pre-compute unigram frequencies using `corpus_to_freqs.py`. If the user does not choose word n-grams higher than degree 1, I fit the solver on the pre-computed unigrams; otherwise, I fit on the corpus directly (which takes longer). But if you have a custom data source, you can fit the solver using that data by using either `--freqs_path` or `--docs_path`.
 
-If you'd like to use this Kaggle news data, then download the data [here](https://www.kaggle.com/snapcrack/all-the-news) and put the zip files into the following directory structure and then run `make_kaggle_data.sh`. (This is manual because you need to create a Kaggle account to access the data.)
+If you'd like to use this Kaggle news data, then download the data [here](https://www.kaggle.com/snapcrack/all-the-news) and put the zip files into the following directory structure and then run `make_data/make_kaggle_data.sh`. (This is manual because you need to create a Kaggle account to access the data.)
 
 ```
 data

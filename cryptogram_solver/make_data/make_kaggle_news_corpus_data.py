@@ -28,9 +28,11 @@ import zipfile
 from tqdm import tqdm
 
 from cryptogram_solver import defaults
+from cryptogram_solver import utils
 
 
 # https://www.kaggle.com/snapcrack/all-the-news
+PROJECT_DIR = utils.get_project_dir()
 KAGGLE_NEWS_RAW_DIR = PROJECT_DIR / 'data/raw/corpora/kaggle_news'
 
 
