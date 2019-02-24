@@ -84,20 +84,20 @@ class Tokenizer:
 
     def tokenize(self, text):
         """Tokenize text into char- and word-level n-grams."""
-        text = re.sub(r'[^a-zA-Z ]', '?', text.lower())  # remove punct
+        text = re.sub(r'[^a-zA-Z ]', '?', text.lower())
         words = self._get_words(text)
-        word_tokens = self._get_tokens(words, self.word_ngram_range, 'word')
+        all_word_tokens = self._get_tokens(words, self.word_ngram_range, 'word')
         if self.char_ngram_range is None:
-            return word_tokens
+            return all_word_tokens
 
-        char_tokens = defaultdict(int)
+        all_char_tokens = defaultdict(int)
         for word in words:
             word = '<' + word + '>'
-            tk = self._get_tokens(word, self.char_ngram_range, 'char')
-            for token, count in tk.items():
-                char_tokens[token] += count
+            char_tokens = self._get_tokens(word, self.char_ngram_range, 'char')
+            for token, count in char_tokens.items():
+                all_char_tokens[token] += count
 
-        tokens = {**word_tokens, **char_tokens}
+        tokens = {**all_word_tokens, **all_char_tokens}
         return tokens
 
 

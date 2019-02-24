@@ -5,6 +5,9 @@ Authors: Chris Sipola
 Created: 2019-01-25
 
 Basic utility functions.
+
+Some of these are basic versions of numpy functions. They're recreated
+here so that we don't have to rely on numpy as a dependency.
 """
 from math import exp
 from pathlib import Path
@@ -42,8 +45,7 @@ def linspace(start, stop, num):
 def rpoisson(lamb):
     """Generate random number from poisson distribution.
 
-    Don't want to use scipy or numpy as a dependency. Make so that when
-    lambda is 0, output is 0.
+    When lambda is 0, output is 0.
 
     https://en.wikipedia.org/wiki/Poisson_distribution#Generating_Poisson-distributed_random_variables
     """

@@ -12,6 +12,7 @@ from cryptogram_solver import defaults
 from cryptogram_solver import read_data
 from cryptogram_solver import solver
 from cryptogram_solver import utils
+from cryptogram_solver.solver import Token
 
 
 PROJECT_DIR = utils.get_project_dir()
@@ -43,6 +44,37 @@ def decrypt_kwargs(scope='module'):
         lamb_end=defaults.LAMB_END
     )
     return decrypt_kwargs
+
+
+@pytest.fixture
+def tokenizer(scope='module'):
+    tk = solver.Tokenizer(
+        char_ngram_range=(2, 3),
+        word_ngram_range=(1, 2),
+    )
+    return tk
+
+
+def test_tokenizer(tokenizer):
+    expected_tokens = {
+        Token(ngrams=('a',), kind='word', n=1): 1,
+        Token(ngrams=('test',), kind='word', n=1): 1,
+        Token(ngrams=('a', 'test'), kind='word', n=2): 1,
+        Token(ngrams=('<', 'a'), kind='char', n=2): 1,
+        Token(ngrams=('a', '>'), kind='char', n=2): 1,
+        Token(ngrams=('<', 'a', '>'), kind='char', n=3): 1,
+        Token(ngrams=('<', 't'), kind='char', n=2): 1,
+        Token(ngrams=('t', 'e'), kind='char', n=2): 1,
+        Token(ngrams=('e', 's'), kind='char', n=2): 1,
+        Token(ngrams=('s', 't'), kind='char', n=2): 1,
+        Token(ngrams=('t', '>'), kind='char', n=2): 1,
+        Token(ngrams=('<', 't', 'e'), kind='char', n=3): 1,
+        Token(ngrams=('t', 'e', 's'), kind='char', n=3): 1,
+        Token(ngrams=('e', 's', 't'), kind='char', n=3): 1,
+        Token(ngrams=('s', 't', '>'), kind='char', n=3): 1
+    }
+    tokens = tokenizer.tokenize('A test!')
+    assert tokens == expected_tokens
 
 
 def test_solver_serialization(slv):

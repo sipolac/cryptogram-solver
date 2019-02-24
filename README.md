@@ -13,7 +13,9 @@ Solver for [cryptograms](https://en.wikipedia.org/wiki/Cryptogram) (substitution
   - [Tokenizer](#tokenizer)
   - [Scoring](#scoring)
   - [Optimization](#optimization)
-  - [Data](#data)
+- [Data](#data)
+  - [Using the default data](#default)
+  - [Using custom data](#custom)
 - [Dependencies](#dependencies)
 - [TODOs](#todos)
 
@@ -196,11 +198,14 @@ where `lamb_start` is the starting lambda (at the beginning of the optimization)
 
 <a name="data"/>
 
-## Data
+# Data
 
 The solver can be fitted using either a corpus of documents (as a text file) or a list of precomputed word unigram frequencies (as a CSV file). It's much quicker to train on precomputed unigram frequencies. However, word bigram frequencies can't be determined from word unigram frequencies, so the highest possible degree in your word n-gram range is 1 if fitting on the unigram frequencies. Therefore, if the user does not choose word n-grams higher than degree 1, then the solver is fitted on the pre-computed unigrams (see `FREQS_PATH` in `defaults.py`); otherwise, it's fitted on the corpus directly (`CORPUS_PATH`).
 
-### Using the default data
+
+<a name="default"/>
+
+## Using the default data
 If you'd like to use the default data to fit the solver, then download the data [here](https://www.kaggle.com/snapcrack/all-the-news) and put the zip files into the following directory structure and then run `make_data/make_kaggle_data.sh`. This is a manual process because you need to create a Kaggle account to access the data.
 
 ```
@@ -212,7 +217,9 @@ data
         |-- articles3.csv.zip
 ```
 
-### Using custom data
+<a name="custom"/>
+
+## Using custom data
 To use your own custom data to fit the solver, you can do one of the following:
 - **Change the default paths.** If you have a corpus but not unigram frequencies, then modify `CORPUS_PATH` (where you saved the corpus data) and `FREQS_PATH` (where you want the unigram frequency data to be generated) in `defaults.py`. Then run `corpus_to_freqs.py`. If you have both corpus data and unigram frequency data, then just modify the paths just mentioned.
 - **Specify paths each time.** That is, specify either `--freqs_path` or `--docs_path` each time you fit the solver.
@@ -228,8 +235,8 @@ To use your own custom data to fit the solver, you can do one of the following:
 <a name="todos"/>
 
 # TODOS
-1. Store data somewhere and Write script to download it. (And possibly change the data source.)
+1. Store data somewhere and write script to download it. (And possibly change the data source.)
 1. Use random search to find better set of parameters.
 1. See if pre-computing log probabilities results in a significant speedup.
 1. See if turning tokens into joined strings speeds things up.
-1. Finish this README!
+1. Clean up this README!
