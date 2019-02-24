@@ -9,7 +9,6 @@ Tests for the solver.
 import pytest
 
 from cryptogram_solver import defaults
-from cryptogram_solver import read_data
 from cryptogram_solver import solver
 from cryptogram_solver import utils
 from cryptogram_solver.solver import Token
@@ -30,7 +29,7 @@ def slv(scope='module'):
         pseudo_count=defaults.PSEUDO_COUNT,
     )
     slv = solver.Solver(cfg)
-    slv.fit(freqs=read_data.read_freqs(defaults.FREQS_PATH))
+    slv.fit(freqs=utils.read_freqs(defaults.FREQS_PATH))
     return slv
 
 

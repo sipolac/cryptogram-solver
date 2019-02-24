@@ -9,9 +9,12 @@ Basic utility functions.
 Some of these are basic versions of numpy functions. They're recreated
 here so that we don't have to rely on numpy as a dependency.
 """
+from collections import OrderedDict
 from math import exp
 from pathlib import Path
 from random import uniform
+
+from cryptogram_solver import defaults
 
 
 def get_project_dir():
@@ -21,6 +24,44 @@ def get_project_dir():
         if filepath.stem == file_stem:
             break
     return filepath
+
+
+def read_freqs(path, n=50000):
+    """Create word frequencies dictionary.
+
+    Args:
+        path: Path or str that points to a CSV with two columns, where
+            the first column is the unigram and the second is the frequency.
+        n: Top n most frequent terms are read, assuming CSV is ordered
+            descending by frequency.
+
+    Returns:
+        OrderedDict of {n-gram: frequency} pairs.
+    """
+    freqs = OrderedDict()
+    max_ix = n
+    with open(path) as f:
+        for i, line in enumerate(f):
+            if i == max_ix:
+                break
+            word, freq = line.strip().split(',')
+            try:
+                freqs[word] = int(freq)
+            except ValueError:
+                if i == 0:
+                    max_ix += 1  # increment to account for CSV header
+                else:
+                    raise Exception('character value for frequency')
+    return freqs
+
+
+def read_docs(path, n=None):
+    """Create generator of documents from corpus."""
+    with open(path) as f:
+        for i, line in enumerate(f):
+            if i == n:
+                return
+            yield line.strip()
 
 
 def impute_defaults(d, default_d):
@@ -58,3 +99,13 @@ def rpoisson(lamb):
         k += 1
         p *= uniform(0, 1)
     return k - 1
+
+
+def main():
+    # Quick spot check.
+    print(read_freqs(defaults.FREQS_PATH, 3))
+    print(list(read_docs(defaults.CORPUS_PATH))[1][:100])
+
+
+if __name__ == '__main__':
+    main()

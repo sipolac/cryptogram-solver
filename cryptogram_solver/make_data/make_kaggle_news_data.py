@@ -28,6 +28,7 @@ import zipfile
 from tqdm import tqdm
 
 from cryptogram_solver import defaults
+from cryptogram_solver import corpus_to_freqs
 from cryptogram_solver import utils
 
 
@@ -71,19 +72,19 @@ def write_news_articles(dirpath, outfile, n, logger=None):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dirpath',
-                        default=KAGGLE_NEWS_RAW_DIR,
-                        type=Path)
-    parser.add_argument('--outfile',
-                        default=defaults.CORPUS_PATH,
-                        type=Path)
-    parser.add_argument('-n', '--num_docs', default=10000, type=int)
+    parser.add_argument('--raw_path', default=KAGGLE_NEWS_RAW_DIR, type=Path)
+    parser.add_argument('--corpus_path', default=defaults.CORPUS_PATH, type=Path)
+    parser.add_argument('--freqs_path', default=defaults.FREQS_PATH, type=Path)
+    parser.add_argument('--write_freqs', action='store_true', default=True)
     args = parser.parse_args()
 
     log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     logging.basicConfig(level='INFO', format=log_fmt)
 
-    write_news_articles(args.dirpath, args.outfile, args.num_docs)
+    write_news_articles(args.raw_path, args.corpus_path, args.num_docs)
+
+    if args.write_freqs:
+        corpus_to_freqs.make_unigram_freqs(args.corpus_path, args.freqs_path)
 
 
 if __name__ == '__main__':

@@ -19,7 +19,6 @@ import re
 from tqdm import tqdm
 
 from cryptogram_solver import defaults
-from cryptogram_solver import read_data
 from cryptogram_solver import utils
 
 
@@ -309,10 +308,10 @@ def run_solver(
 
         if freqs_path:
             print('reading frequency data for fitting solver...')
-            slv.fit(freqs=read_data.read_freqs(freqs_path))
+            slv.fit(freqs=utils.read_freqs(freqs_path))
         else:
             print('reading corpus data for fitting solver...')
-            slv.fit(docs=read_data.read_docs(docs_path, n_docs))
+            slv.fit(docs=utils.read_docs(docs_path, n_docs))
         if save_solver:
             slv.save(models_path)
 

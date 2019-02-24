@@ -206,7 +206,7 @@ The solver can be fitted using either a corpus of documents (as a text file) or 
 <a name="default"/>
 
 ## Using the default data
-If you'd like to use the default data to fit the solver, then download the data [here](https://www.kaggle.com/snapcrack/all-the-news) and put the zip files into the following directory structure and then run `make_data/make_kaggle_data.sh`. This is a manual process because you need to create a Kaggle account to access the data.
+If you'd like to use the default data to fit the solver, then download the data [here](https://www.kaggle.com/snapcrack/all-the-news) and put the zip files into the following directory structure and then run `make_data/make_kaggle_news_data.py`. This is a manual process because you need to create a Kaggle account to access the data.
 
 ```
 data

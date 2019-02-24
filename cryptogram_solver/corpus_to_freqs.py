@@ -11,8 +11,8 @@ from collections import defaultdict
 from tqdm import tqdm
 
 from cryptogram_solver import defaults
-from cryptogram_solver import read_data
 from cryptogram_solver import solver
+from cryptogram_solver import utils
 
 
 def make_unigram_freqs(docs_path, outfile, n=None):
@@ -25,7 +25,7 @@ def make_unigram_freqs(docs_path, outfile, n=None):
         char_ngram_range=None,
         word_ngram_range=(1, 1)
     )
-    docs = read_data.read_docs(docs_path)
+    docs = utils.read_docs(docs_path)
     unigram_counts = defaultdict(int)
     for doc in tqdm(docs):
         doc_tokens = tk.tokenize(doc)
