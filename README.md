@@ -11,7 +11,8 @@ See help: `python solver.py -h`
 
 ```
 usage: solver.py [-h] [-i NUM_ITERS] [-c CHAR_NGRAM_RANGE CHAR_NGRAM_RANGE]
-                 [-w WORD_NGRAM_RANGE WORD_NGRAM_RANGE] [-n N_DOCS]
+                 [-w WORD_NGRAM_RANGE WORD_NGRAM_RANGE]
+                 [--freqs_path FREQS_PATH] [--docs_path DOCS_PATH] [-n N_DOCS]
                  [-b VOCAB_SIZE] [-p PSEUDO_COUNT]
                  [--log_temp_start LOG_TEMP_START]
                  [--log_temp_end LOG_TEMP_END] [--lamb_start LAMB_START]
@@ -30,6 +31,11 @@ optional arguments:
                         range of character n-grams to use in tokenization
   -w WORD_NGRAM_RANGE WORD_NGRAM_RANGE, --word_ngram_range WORD_NGRAM_RANGE WORD_NGRAM_RANGE
                         range of word n-grams to use in tokenization
+  --freqs_path FREQS_PATH
+                        path to word n-gram frequencies (a CSV file) for
+                        fitting solver
+  --docs_path DOCS_PATH
+                        path to corpus (a text file) for fitting solver
   -n N_DOCS, --n_docs N_DOCS
                         number of documents used to estimate token frequencies
   -b VOCAB_SIZE, --vocab_size VOCAB_SIZE
@@ -41,8 +47,10 @@ optional arguments:
   --log_temp_end LOG_TEMP_END
                         log of final temperature
   --lamb_start LAMB_START
-                        poisson lambda for number of letter swaps in beginning
-  --lamb_end LAMB_END   poisson lambda for number of letter swaps at end
+                        poisson lambda for number of additional letter swaps
+                        in beginning; use 0 for single swaps
+  --lamb_end LAMB_END   poisson lambda for number of additional letter swaps
+                        at end; use 0 for single swaps
   -l, --load_solver     load pre-fitted solver
   -s, --save_solver     save fitted solver for use later
   -v, --verbose         verbose output for showing solve process
@@ -51,9 +59,9 @@ optional arguments:
 
 # Examples
 
-To fit a solver on 1000 documents (`-n 1000`) with a tokenizer that uses character trigrams (`-c 3 3`) and word unigrams (`-w 1 1`) with a max vocab size of 5000 (`-b 5000`), save it to file (`-s`) (right now just to `data/cache/`), and solve the encrypted text (represented here as `<ENCRYPTED TEXT>`):
+To fit a solver on 1000 documents (`-n 1000`) from a custom corpus (`--docs_path <PATH>`) with a tokenizer that uses character trigrams (`-c 3 3`) and word unigrams (`-w 1 1`) with a max vocab size of 5000 (`-b 5000`), save it to file (`-s`) (right now just to `models/cached/`), and solve the encrypted text (represented here as `<ENCRYPTED TEXT>`):
 
-    python solver.py <ENCRYPTED TEXT> -n 1000 -c 3 3 -w 1 1 -b 5000 -s
+    python solver.py <ENCRYPTED TEXT> -n 1000 --docs_path <PATH> -c 3 3 -w 1 1 -b 5000 -s
 
 To load a fitted solver (`-l`) and run the optimizer for 5000 iterations (`-i 5000`) with a starting lambda (for character swaps; see below) of 1 (`--lamb_start 1`) and verbose output (`-v`):
 
@@ -72,9 +80,9 @@ For example, let's say you're given the puzzle below.
 
 > "SNDVSODTSBO LDF VSHYO TB NDO TB EBNRYOFDTY KSN PBX LKDT KY SF OBT, DOC D FYOFY BP KZNBX LDF RXBHSCYC TB EBOFBJY KSN PBX LKDT KY SF." -BFEDX LSJCY
  
- The goal is to realize that _i_'s were replaced with _S_'s, _m_'s with _N_'s, and so on for all the letters of the alphabet. Once you make all the correct substitutions, you get the following text.
+The goal is to realize that _i_'s were replaced with _S_'s, _m_'s with _N_'s, and so on for all the letters of the alphabet. Once you make all the correct substitutions, you get the following text.
 
- > "Imagination was given to man to compensate him for what he is not, and a sense of humor was provided to console him for what he is." -Oscar Wilde
+> "Imagination was given to man to compensate him for what he is not, and a sense of humor was provided to console him for what he is." -Oscar Wilde
 
 By hand, you'd use heuristics to solve cryptograms iteratively. E.g., if you see _ZXCVB'N_, you might guess that _N_ is _t_ or _s_. You might also guess that if _X_ appears a lot in the text, it might be a common letter like _e_.
 
@@ -152,10 +160,30 @@ To decrease the number of swaps over time, I use a poisson distribution with a l
 ```python
 def schedule_swaps(lamb_start, lamb_end, n):
     for l in linspace(lamb_start, lamb_end, n):
-        yield poisson(l) + 1 
+        yield rpoisson(l) + 1 
 ```
 
-where `lamb_start` is the starting lambda (at the beginning of the optimization), `lamb_end` is the ending lambda, `n` is the number of iterations in the optimization, `linspace` is a function that returns evenly spaced numbers over a specified interval (a basic version of [numpy's implementation](https://docs.scipy.org/doc/numpy/reference/generated/numpy.linspace.html)), and `poisson` is a function that draws a sample from a poisson distribution given a lambda parameter. Note that a lambda greater than zero gives you *additional* swaps; if `lamb_start` and `lamb_end` are both zero, then in every iteration you swap only once.
+where `lamb_start` is the starting lambda (at the beginning of the optimization), `lamb_end` is the ending lambda, `n` is the number of iterations in the optimization, `linspace` is a function that returns evenly spaced numbers over a specified interval (a basic version of [numpy's implementation](https://docs.scipy.org/doc/numpy/reference/generated/numpy.linspace.html)), and `rpoisson` is a function that draws a random sample from a poisson distribution given a lambda parameter. Note that a lambda greater than zero gives you *additional* swaps; if `lamb_start` and `lamb_end` are both zero, then in every iteration you swap only once.
+
+
+## Data
+
+The solver can be fitted using either a corpus of documents (as a text file) or a list of precomputed word unigram frequencies (as a CSV file). If using the unigram frequencies, the highest possible degree in your word n-gram range is 1.
+
+By default, I use news data found on Kaggle as my corpus, and I pre-compute unigram frequencies using `make_freqs.py`. If the user does not choose word n-grams higher than degree 1, I fit the solver on the pre-computed unigrams; otherwise, I fit on the corpus directly (which takes longer). But if you have a custom data source, you can fit the solver using that data by using either `--freqs_path` or `--docs_path`.
+
+If you'd like to use this Kaggle news data, then download the data [here](https://www.kaggle.com/snapcrack/all-the-news) and put the zip files into the following directory structure and then run `make_kaggle_data.sh`. (This is manual because you need to create a Kaggle account to access the data.)
+
+```
+data
+|-- raw
+    |-- kaggle_news
+        |-- articles1.csv.zip
+        |-- articles2.csv.zip
+        |-- articles3.csv.zip
+```
+
+Otherwise, if you'd like to change the default files used for the corpus or the frequencies—so you don't have to specify them each time you fit a solver—then modify `defaults.py`.
 
 
 # Dependencies
@@ -164,8 +192,7 @@ where `lamb_start` is the starting lambda (at the beginning of the optimization)
 
 
 # TODOS
-1. Write script to download data. (And possibly change the data source.)
-1. Create function for preprocessing data.
+1. Store data somewhere and Write script to download it. (And possibly change the data source.)
 1. Use random search to find better set of parameters.
 1. See if pre-computing log probabilities results in a significant speedup.
 1. See if turning tokens into joined strings speeds things up.

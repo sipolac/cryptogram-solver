@@ -4,14 +4,12 @@
 Authors: Chris Sipola
 Created: 2019-02-09
 
-Basic test of the solver with a simple cryptogram.
-
-This cryptogram is simple enough that it should be solved almost every time.
+Tests for the solver.
 """
 import pytest
 
-from cryptogram_solver import data
 from cryptogram_solver import defaults
+from cryptogram_solver import read_data
 from cryptogram_solver import solver
 from cryptogram_solver import utils
 
@@ -19,7 +17,7 @@ from cryptogram_solver import utils
 PROJECT_DIR = utils.get_project_dir()
 TEST_PATH = PROJECT_DIR / 'models' / 'test'
 TEST_VOCAB_SIZE = 9999
-TEST_N_DOCS = 100
+N_DOCS = 100
 
 
 @pytest.fixture
@@ -31,8 +29,7 @@ def slv(scope='module'):
         pseudo_count=defaults.PSEUDO_COUNT,
     )
     slv = solver.Solver(cfg)
-    docs = data.get_news_articles()
-    slv.fit(docs[:TEST_N_DOCS])
+    slv.fit(freqs=read_data.read_freqs(defaults.FREQS_PATH))
     return slv
 
 

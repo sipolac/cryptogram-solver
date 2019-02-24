@@ -20,6 +20,15 @@ def get_project_dir():
     return filepath
 
 
+def impute_defaults(d, default_d):
+    """Impute values of dictionary with defaults if key doesn't exist."""
+    assert all([k in default_d for k in d])
+    for k, v in default_d.items():
+        if k not in d:
+            d[k] = v
+    return d
+
+
 def linspace(start, stop, num):
     """Return evenly spaced numbers over a specified interval.
 

@@ -8,6 +8,7 @@ Functions for solving cryptograms.
 """
 from collections import Counter, defaultdict, namedtuple
 from math import exp, log
+from pathlib import Path
 from random import sample, uniform
 from string import ascii_lowercase as LETTERS
 import argparse
@@ -17,9 +18,9 @@ import re
 
 from tqdm import tqdm
 
-from cryptogram_solver import data
-from cryptogram_solver import utils
 from cryptogram_solver import defaults
+from cryptogram_solver import read_data
+from cryptogram_solver import utils
 
 
 PROJECT_DIR = utils.get_project_dir()
@@ -101,7 +102,7 @@ class Tokenizer:
 
 
 class Solver:
-    def __init__(self, cfg=dict(), logger=None):
+    def __init__(self, cfg={}, logger=None):
         self.logger = logger or logging.getLogger(__name__)
 
         # Set config of solver. Right now set defaults as None, but later
@@ -112,7 +113,7 @@ class Solver:
             vocab_size=None,
             pseudo_count=None
         )
-        self.cfg = self._impute_defaults(cfg, default_cfg)
+        self.cfg = utils.impute_defaults(cfg, default_cfg)
 
         self.tokenizer = Tokenizer(
             cfg['char_ngram_range'],
@@ -123,16 +124,37 @@ class Solver:
         self.vocab = None
         self.totals = None
 
-    def fit(self, texts):
-        """Compute token probabilities from data.
+    def _fit_docs(self, docs):
+        """Compute token probabilities from list of documents."""
+        vocab = defaultdict(int)
+        for doc in tqdm(docs, desc='fitting solver'):
+            for token, count in self.tokenizer.tokenize(doc).items():
+                vocab[token] += count
+        return vocab
+
+    def _fit_freqs(self, freqs):
+        """Compute token probabilities from dict of freqs.
+
+        If data is unigram frequencies, then the word n-gram range can't
+        have a value that exceeds 1.
+        """
+        vocab = defaultdict(int)
+        for word, freq in freqs.items():
+            for token, count in self.tokenizer.tokenize(word).items():
+                vocab[token] += count * freq
+        return vocab
+
+    def fit(self, docs=None, freqs=None):
+        """Compute token probabilities from dict of freqs or list of docs.
 
         Also subset for most frequent tokens. Keep track of frequencies
         of individual tokens and of token types.
         """
-        vocab = defaultdict(int)
-        for text in tqdm(texts, desc='fitting solver'):
-            for token, count in self.tokenizer.tokenize(text).items():
-                vocab[token] += count
+        assert bool(docs) != bool(freqs)
+        if freqs:
+            vocab = self._fit_freqs(freqs)
+        else:
+            vocab = self._fit_docs(docs)
 
         # Count totals by token type (kind & n-gram).
         totals = defaultdict(int)
@@ -200,7 +222,7 @@ class Solver:
 
             mapping = best_mapping
 
-            if self.logger.level < 20 and i % 1000 == 0:
+            if i % 1000 == 0:
                 self.logger.debug((
                     f'\nscore: {score:0.5g}'
                     f'\nkey: {mapping.key}'
@@ -210,6 +232,13 @@ class Solver:
 
         decrypted = mapping.translate(encrypted)
         return {'mapping': mapping, 'decrypted': decrypted}
+
+    def _schedule_temp(self, start, end, n):
+        # Return list instead of generator so you can subset later.
+        return [exp(x) for x in utils.linspace(start, end, n)]
+
+    def _schedule_swaps(self, start, end, n):
+        return [utils.rpoisson(l) + 1 for l in utils.linspace(start, end, n)]
 
     def save(self, path):
         path.mkdir(exist_ok=True)
@@ -230,20 +259,6 @@ class Solver:
         slv.vocab = vocab
         slv.totals = totals
         return slv
-
-    def _impute_defaults(self, d, default_d):
-        assert all([k in default_d for k in d])
-        for k, v in default_d.items():
-            if k not in d:
-                d[k] = v
-        return d
-
-    def _schedule_temp(self, start, end, n):
-        # Return list instead of generator so you can subset later.
-        return [exp(x) for x in utils.linspace(start, end, n)]
-
-    def _schedule_swaps(self, start, end, n):
-        return [utils.rpoisson(l) + 1 for l in utils.linspace(start, end, n)]
 
     def _jsonify_vocab(self, vocab):
         return [[list(t), c] for t, c in vocab.items()]
@@ -275,6 +290,8 @@ def run_solver(
     log_temp_end=None,
     lamb_start=None,
     lamb_end=None,
+    freqs_path=None,
+    docs_path=None,
     n_docs=None,
     load_solver=False,
     save_solver=False,
@@ -287,11 +304,15 @@ def run_solver(
         slv = Solver.load(models_path)
 
     else:
+        assert bool(freqs_path) != bool(docs_path)
         slv = Solver(cfg)
 
-        print('reading data for training solver...')
-        docs = data.get_news_articles(n_docs)
-        slv.fit(docs)
+        if freqs_path:
+            print('reading frequency data for fitting solver...')
+            slv.fit(freqs=read_data.read_freqs(freqs_path))
+        else:
+            print('reading corpus data for fitting solver...')
+            slv.fit(docs=read_data.read_docs(docs_path, n_docs))
         if save_solver:
             slv.save(models_path)
 
@@ -329,6 +350,14 @@ def main():
         '-w', '--word_ngram_range', nargs=2,
         default=defaults.WORD_NGRAM_RANGE, type=int,
         help='range of word n-grams to use in tokenization'
+    )
+    parser.add_argument(
+        '--freqs_path', default=None, type=Path,
+        help='path to word n-gram frequencies (a CSV file) for fitting solver'
+    )
+    parser.add_argument(
+        '--docs_path', default=None, type=Path,
+        help='path to corpus (a text file) for fitting solver'
     )
     parser.add_argument(
         '-n', '--n_docs', default=defaults.N_DOCS, type=int,
@@ -385,6 +414,12 @@ def main():
     logging.basicConfig(level=log_level, format=log_fmt)
     logger = logging.getLogger(__name__)
 
+    if args.freqs_path is None and args.docs_path is None:
+        if args.word_ngram_range[1] > 1:
+            args.docs_path = defaults.CORPUS_PATH
+        else:
+            args.freqs_path = defaults.FREQS_PATH
+
     cfg = dict(
         char_ngram_range=args.char_ngram_range,
         word_ngram_range=args.word_ngram_range,
@@ -400,6 +435,8 @@ def main():
         log_temp_end=args.log_temp_end,
         lamb_start=args.lamb_start,
         lamb_end=args.lamb_end,
+        freqs_path=args.freqs_path,
+        docs_path=args.docs_path,
         n_docs=args.n_docs,
         load_solver=args.load_solver,
         save_solver=args.save_solver,
