@@ -4,6 +4,21 @@ Solver for [cryptograms](https://en.wikipedia.org/wiki/Cryptogram) (substitution
 
 ![](references/demo.gif)
 
+# Table of contents
+
+- [Arguments](#args)
+- [Examples](#examples)
+- [What is a cryptogram?](#whatis)
+- [Method](#method)
+  - [Tokenizer](#tokenizer)
+  - [Scoring](#scoring)
+  - [Optimization](#optimization)
+  - [Data](#data)
+- [Dependencies](#dependencies)
+- [TODOs](#todos)
+
+
+<a name="args"/>
 
 # Arguments
 
@@ -57,11 +72,13 @@ optional arguments:
 ```
 
 
+<a name="examples"/>
+
 # Examples
 
-To fit a solver on 1000 documents (`-n 1000`) from a custom corpus (`--docs_path <PATH>`) with a tokenizer that uses character trigrams (`-c 3 3`) and word unigrams (`-w 1 1`) with a max vocab size of 5000 (`-b 5000`), save it to file (`-s`) (right now just to `models/cached/`), and solve the encrypted text (represented here as `<ENCRYPTED TEXT>`):
+To fit a solver on 1000 documents (`-n 1000`) from a custom corpus (`--docs_path <PATH>`) with a tokenizer that uses character bigrams and trigrams (`-c 2 3`) and word unigrams (`-w 1 1`) with a max vocab size of 5000 (`-b 5000`), save it to file (`-s`) (right now just to `models/cached/`), and solve the encrypted text (represented here as `<ENCRYPTED TEXT>`):
 
-    python solver.py <ENCRYPTED TEXT> -n 1000 --docs_path <PATH> -c 3 3 -w 1 1 -b 5000 -s
+    python solver.py <ENCRYPTED TEXT> -n 1000 --docs_path <PATH> -c 2 3 -w 1 1 -b 5000 -s
 
 To load a fitted solver (`-l`) and run the optimizer for 5000 iterations (`-i 5000`) with a starting lambda (for character swaps; see below) of 1 (`--lamb_start 1`) and verbose output (`-v`):
 
@@ -69,6 +86,8 @@ To load a fitted solver (`-l`) and run the optimizer for 5000 iterations (`-i 50
 
 The default settings tend to work well most of the time. Usually you only need to specify the encrypted text, saving (`-s`), loading (`-l`) and the number of iterations (`-i`, which you can set to be lower for longer decryptions). At some point I'd like to do some "hyperparameter" optimization to determine better default settings.
 
+
+<a name="whatis"/>
 
 # What is a cryptogram?
 
@@ -89,7 +108,12 @@ By hand, you'd use heuristics to solve cryptograms iteratively. E.g., if you see
 But having a computer solve this is tricky.  You can't brute-force your way through a cryptogram since there are 26! = 403,291,461,126,605,635,584,000,000 different mappings. (That is, the letter _a_ could map to one of 26 letters, _b_ could map to 25, and so on.) And there isn't a surefire way to tell if you've found the correct mapping.
 
 
+<a name="method"/>
+
 # Method
+
+
+<a name="tokenizer"/>
 
 ## Tokenizer
 
@@ -115,12 +139,16 @@ Token(ngrams=('l', 'o', '>'), kind='char', n=3)
 ```
 
 
+<a name="scoring"/>
+
 ## Scoring
 
 To score decryptions, I use the negative log likelihood of the token probabilities. Token probabilities are computed by token "type" (word/character and n-gram count combination). For example, to compute the probability of a character bigram, I divide the frequency of that bigram by the total number of character bigrams. This is done when "fitting" the solver to data (see `Solver.fit()`).
 
 You can think of score as error, so lower is better.
 
+
+<a name="optimization"/>
 
 ## Optimization
 
@@ -166,6 +194,8 @@ def schedule_swaps(lamb_start, lamb_end, n):
 where `lamb_start` is the starting lambda (at the beginning of the optimization), `lamb_end` is the ending lambda, `n` is the number of iterations in the optimization, `linspace` is a function that returns evenly spaced numbers over a specified interval (a basic version of [numpy's implementation](https://docs.scipy.org/doc/numpy/reference/generated/numpy.linspace.html)), and `rpoisson` is a function that draws a random sample from a poisson distribution given a lambda parameter. Note that a lambda greater than zero gives you *additional* swaps; if `lamb_start` and `lamb_end` are both zero, then in every iteration you swap only once.
 
 
+<a name="data"/>
+
 ## Data
 
 The solver can be fitted using either a corpus of documents (as a text file) or a list of precomputed word unigram frequencies (as a CSV file). If using the unigram frequencies, the highest possible degree in your word n-gram range is 1.
@@ -186,10 +216,14 @@ data
 Otherwise, if you'd like to change the default files used for the corpus or the frequencies—so you don't have to specify them each time you fit a solver—then modify `defaults.py`.
 
 
+<a name="dependencies"/>
+
 # Dependencies
 
 - [tqdm](https://github.com/tqdm/tqdm) for progress bars
 
+
+<a name="todos"/>
 
 # TODOS
 1. Store data somewhere and Write script to download it. (And possibly change the data source.)
