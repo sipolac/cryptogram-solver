@@ -49,7 +49,7 @@ def decrypt_kwargs(scope='module'):
 @pytest.fixture
 def tokenizer(scope='module'):
     tk = solver.Tokenizer(
-        char_ngram_range=(2, 3),
+        char_ngram_range=(1, 2),
         word_ngram_range=(1, 2),
     )
     return tk
@@ -60,18 +60,19 @@ def test_tokenizer(tokenizer):
         Token(ngrams=('a',), kind='word', n=1): 1,
         Token(ngrams=('test',), kind='word', n=1): 1,
         Token(ngrams=('a', 'test'), kind='word', n=2): 1,
+        Token(ngrams=('<',), kind='char', n=1): 2,
+        Token(ngrams=('a',), kind='char', n=1): 1,
+        Token(ngrams=('>',), kind='char', n=1): 2,
         Token(ngrams=('<', 'a'), kind='char', n=2): 1,
         Token(ngrams=('a', '>'), kind='char', n=2): 1,
-        Token(ngrams=('<', 'a', '>'), kind='char', n=3): 1,
+        Token(ngrams=('t',), kind='char', n=1): 2,
+        Token(ngrams=('e',), kind='char', n=1): 1,
+        Token(ngrams=('s',), kind='char', n=1): 1,
         Token(ngrams=('<', 't'), kind='char', n=2): 1,
         Token(ngrams=('t', 'e'), kind='char', n=2): 1,
         Token(ngrams=('e', 's'), kind='char', n=2): 1,
         Token(ngrams=('s', 't'), kind='char', n=2): 1,
-        Token(ngrams=('t', '>'), kind='char', n=2): 1,
-        Token(ngrams=('<', 't', 'e'), kind='char', n=3): 1,
-        Token(ngrams=('t', 'e', 's'), kind='char', n=3): 1,
-        Token(ngrams=('e', 's', 't'), kind='char', n=3): 1,
-        Token(ngrams=('s', 't', '>'), kind='char', n=3): 1
+        Token(ngrams=('t', '>'), kind='char', n=2): 1
     }
     tokens = tokenizer.tokenize('A test!')
     assert tokens == expected_tokens
