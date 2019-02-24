@@ -4,14 +4,16 @@
 Authors: Chris Sipola
 Created: 2019-02-09
 
-Tests for reading read_data.
+Tests for reading data.
 """
 from cryptogram_solver import defaults
 from cryptogram_solver import read_data
 
 
 def test_read_freqs():
-    freqs = read_data.read_freqs(defaults.FREQS_PATH, 3)
+    n = 3
+    freqs = read_data.read_freqs(defaults.FREQS_PATH, n)
+    assert len(freqs) == n
     assert 'the' in freqs
 
 
