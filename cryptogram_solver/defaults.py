@@ -3,7 +3,6 @@ from cryptogram_solver import utils
 
 PROJECT_DIR = utils.get_project_dir()
 CORPUS_PATH = PROJECT_DIR / 'data/processed/corpora/kaggle_news.txt'
-# FREQS_PATH = PROJECT_DIR / 'data/raw/freqs/kaggle/unigram_freq.csv'  # https://www.kaggle.com/rtatman/english-word-frequency
 FREQS_PATH = PROJECT_DIR / 'data/processed/freqs/kaggle_news.csv'
 
 # Solver defaults.
