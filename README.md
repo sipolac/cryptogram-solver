@@ -198,11 +198,10 @@ where `lamb_start` is the starting lambda (at the beginning of the optimization)
 
 ## Data
 
-The solver can be fitted using either a corpus of documents (as a text file) or a list of precomputed word unigram frequencies (as a CSV file). If using the unigram frequencies, the highest possible degree in your word n-gram range is 1.
+The solver can be fitted using either a corpus of documents (as a text file) or a list of precomputed word unigram frequencies (as a CSV file). It's much quicker to train on precomputed unigram frequencies. However, word bigram frequencies can't be determined from word unigram frequencies, so the highest possible degree in your word n-gram range is 1 if fitting on the unigram frequencies. Therefore, if the user does not choose word n-grams higher than degree 1, then the solver is fitted on the pre-computed unigrams (see `FREQS_PATH` in `defaults.py`); otherwise, it's fitted on the corpus directly (`CORPUS_PATH`).
 
-By default, I use news data found on Kaggle as my corpus, and I pre-compute unigram frequencies using `corpus_to_freqs.py`. If the user does not choose word n-grams higher than degree 1, I fit the solver on the pre-computed unigrams; otherwise, I fit on the corpus directly (which takes longer). But if you have a custom data source, you can fit the solver using that data by using either `--freqs_path` or `--docs_path`.
-
-If you'd like to use this Kaggle news data, then download the data [here](https://www.kaggle.com/snapcrack/all-the-news) and put the zip files into the following directory structure and then run `make_data/make_kaggle_data.sh`. (This is manual because you need to create a Kaggle account to access the data.)
+### Using the default data
+If you'd like to use the default data to fit the solver, then download the data [here](https://www.kaggle.com/snapcrack/all-the-news) and put the zip files into the following directory structure and then run `make_data/make_kaggle_data.sh`. This is a manual process because you need to create a Kaggle account to access the data.
 
 ```
 data
@@ -213,7 +212,10 @@ data
         |-- articles3.csv.zip
 ```
 
-Otherwise, if you'd like to change the default files used for the corpus or the frequencies—so you don't have to specify them each time you fit a solver—then modify `defaults.py`.
+### Using custom data
+To use your own custom data to fit the solver, you can do one of the following:
+- **Change the default paths.** If you have a corpus but not unigram frequencies, then modify `CORPUS_PATH` (where you saved the corpus data) and `FREQS_PATH` (where you want the unigram frequency data to be generated) in `defaults.py`. Then run `corpus_to_freqs.py`. If you have both corpus data and unigram frequency data, then just modify the paths just mentioned.
+- **Specify paths each time.** That is, specify either `--freqs_path` or `--docs_path` each time you fit the solver.
 
 
 <a name="dependencies"/>
