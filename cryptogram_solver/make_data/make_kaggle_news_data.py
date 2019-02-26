@@ -32,7 +32,6 @@ from cryptogram_solver import corpus_to_freqs
 from cryptogram_solver import utils
 
 
-# https://www.kaggle.com/snapcrack/all-the-news
 PROJECT_DIR = utils.get_project_dir()
 KAGGLE_NEWS_RAW_DIR = PROJECT_DIR / 'data/raw/corpora/kaggle_news'
 

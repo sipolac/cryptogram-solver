@@ -16,7 +16,7 @@ from cryptogram_solver import utils
 
 
 def make_unigram_freqs(docs_path, outfile, n=None):
-    """Given corpus, make list of word frequencies sorted descending.
+    """Creates list of word frequencies sorted descending given a corpus.
 
     This just makes loading easier instead of having to fit to a corpus
     each time. Only works if largest word n-gram degree is a unigram.

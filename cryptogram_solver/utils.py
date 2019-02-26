@@ -27,7 +27,9 @@ def get_project_dir():
 
 
 def read_freqs(path, n=50000):
-    """Create word frequencies dictionary.
+    """Creates dictionary of unigram frequencies.
+
+    Can handle CSVs with or without headers.
 
     Args:
         path: Path or str that points to a CSV with two columns, where
@@ -36,7 +38,7 @@ def read_freqs(path, n=50000):
             descending by frequency.
 
     Returns:
-        OrderedDict of {n-gram: frequency} pairs.
+        OrderedDict of {n-gram: frequency}.
     """
     freqs = OrderedDict()
     max_ix = n
@@ -56,7 +58,7 @@ def read_freqs(path, n=50000):
 
 
 def read_docs(path, n=None):
-    """Create generator of documents from corpus."""
+    """Generates documents from corpus."""
     with open(path) as f:
         for i, line in enumerate(f):
             if i == n:
@@ -65,7 +67,12 @@ def read_docs(path, n=None):
 
 
 def impute_defaults(d, default_d):
-    """Impute values of dictionary with defaults if key doesn't exist."""
+    """Imputes values of dictionary with defaults if key doesn't exist.
+
+    Args:
+        d: Dict you want imputed.
+        default_d: Dict used to impute values of other dict.
+    """
     assert all([k in default_d for k in d])
     for k, v in default_d.items():
         if k not in d:
@@ -74,7 +81,7 @@ def impute_defaults(d, default_d):
 
 
 def linspace(start, stop, num):
-    """Return evenly spaced numbers over a specified interval.
+    """Returns evenly spaced numbers over a specified interval.
 
     This is a simple version of numpy's `linspace`:
     https://docs.scipy.org/doc/numpy/reference/generated/numpy.linspace.html
@@ -84,10 +91,11 @@ def linspace(start, stop, num):
 
 
 def rpoisson(lamb):
-    """Generate random number from poisson distribution.
+    """Draws a random sample from a poisson distribution given lambda.
 
     When lambda is 0, output is 0.
 
+    Algorithm from here:
     https://en.wikipedia.org/wiki/Poisson_distribution#Generating_Poisson-distributed_random_variables
     """
     if lamb == 0:

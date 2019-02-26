@@ -29,13 +29,20 @@ Token = namedtuple('Token', 'ngrams kind n')
 
 
 class Mapping:
+    """Letter mapping used to translate one text to another.
+
+    If this is a mapping that correctly decrypts a text, then this would
+    be a cipher.
+    """
     def __init__(self, key=None):
         self.key = key or LETTERS
 
     def scramble(self):
+        """Scrambles letter mapping."""
         self.key = ''.join(sample(self.key, len(self.key)))
 
     def random_swap(self, n=1):
+        """Randomly swaps two letters."""
         key = list(self.key)
         for _ in range(n):
             i1, i2 = sample(range(len(LETTERS)), 2)
@@ -47,6 +54,12 @@ class Mapping:
         return text.translate(trans)
 
     def print_pretty(self):
+        """Prints useful representation of mapping.
+
+        Results are shown ordered in two different ways: the first by
+        the original letters and the second by the letters in the key.
+        This way you can use the output for both encoding and decoding.
+        """
         # Order by original letters.
         lst1 = [f'{l} --> {k.upper()}' for l, k in zip(LETTERS, self.key)]
 
@@ -73,6 +86,16 @@ class Tokenizer:
         return Counter(zip(*[lst[i:] for i in range(n)]))
 
     def _get_tokens(self, lst, ngram_range, kind):
+        """Gets n-gram tokens and their counts.
+
+        Args:
+            lst: List of words from tokenizer.
+            ngram_range: Two-element tuple of ints for n-gram range.
+            kind: 'word' or 'char'
+
+        Returns:
+            Dict of {token: count}.
+        """
         tokens = dict()
         for n in range(ngram_range[0], ngram_range[1] + 1):
             ngrams = self._count_ngrams(lst, n)
@@ -82,7 +105,7 @@ class Tokenizer:
         return tokens
 
     def tokenize(self, text):
-        """Tokenize text into char- and word-level n-grams."""
+        """Tokenizes text into char- and word-level n-grams."""
         text = re.sub(r'[^a-zA-Z ]', '?', text.lower())
         words = self._get_words(text)
         all_word_tokens = self._get_tokens(words, self.word_ngram_range, 'word')
@@ -124,7 +147,7 @@ class Solver:
         self.totals = None
 
     def _fit_docs(self, docs):
-        """Compute token probabilities from list of documents."""
+        """Computes token probabilities from list of documents."""
         vocab = defaultdict(int)
         for doc in tqdm(docs, desc='fitting solver'):
             for token, count in self.tokenizer.tokenize(doc).items():
@@ -132,7 +155,7 @@ class Solver:
         return vocab
 
     def _fit_freqs(self, freqs):
-        """Compute token probabilities from dict of freqs.
+        """Computes token probabilities from dict of freqs.
 
         If data is unigram frequencies, then the word n-gram range can't
         have a value that exceeds 1.
@@ -144,9 +167,9 @@ class Solver:
         return vocab
 
     def fit(self, docs=None, freqs=None):
-        """Compute token probabilities from dict of freqs or list of docs.
+        """Computes token probabilities from dict of freqs or list of docs.
 
-        Also subset for most frequent tokens. Keep track of frequencies
+        Also subsets for most frequent tokens. Keeps track of frequencies
         of individual tokens and of token types.
         """
         assert bool(docs) != bool(freqs)
@@ -170,7 +193,7 @@ class Solver:
         self.totals = totals
 
     def score(self, text):
-        """Caluclate (mean) negative log likelihood."""
+        """Caluclates (mean) negative log likelihood."""
         tokens = self.tokenizer.tokenize(text)
         nll = 0  # negative log likelihood
         for token, count in tokens.items():
@@ -189,7 +212,7 @@ class Solver:
         lamb_start,
         lamb_end
     ):
-        """Solve cryptogram using simulated annealing.
+        """Decrypts cryptogram using simulated annealing.
 
         This uses a pre-set scheduler for both temperature (from simulated
         annealing) and the number of letters randomly swapped in an iteration
@@ -296,6 +319,8 @@ def run_solver(
     save_solver=False,
     logger=None
 ):
+    """Decrypts text and prints results."""
+
     models_path = PROJECT_DIR / 'models' / 'cached'
     logger = logger or logging.getLogger(__name__)
 
