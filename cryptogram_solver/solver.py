@@ -285,15 +285,15 @@ class Solver:
     def _jsonify_vocab(self, vocab):
         return [[list(t), c] for t, c in vocab.items()]
 
-    @classmethod
-    def _unjsonify_vocab(cls, vocab):
-        return {Token(tuple(t[0]), t[1], t[2]): c for t, c in vocab}
-
     def _jsonify_totals(self, totals):
         return list(totals.items())
 
-    @classmethod
-    def _unjsonify_totals(cls, totals):
+    @staticmethod
+    def _unjsonify_vocab(vocab):
+        return {Token(tuple(t[0]), t[1], t[2]): c for t, c in vocab}
+
+    @staticmethod
+    def _unjsonify_totals(totals):
         return {tuple(t): c for t, c in totals}
 
 
