@@ -163,7 +163,7 @@ def simulated_annealing(encrypted, num_iters):
     """Python-style pseudo(-ish)code for simulated annealing algorithm."""
     mapping = Mapping()
     best_mapping = mapping
-    best_score = score(encrypted)
+    best_score = compute_score(encrypted)
 
     for i in range(num_iters):
         temp = temp_list[i]  # from scheduler
@@ -171,7 +171,7 @@ def simulated_annealing(encrypted, num_iters):
 
         new_mapping = mapping.random_swap(num_swaps)
         new_text = new_mapping.translate(encrypted)
-        score = score(new_text)
+        score = compute_score(new_text)
 
         score_change = score - best_score
 
