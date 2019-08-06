@@ -208,10 +208,11 @@ If you'd like to use the default data to fit the solver, then download the data 
 ```
 data
 |-- raw
-    |-- kaggle_news
-        |-- articles1.csv.zip
-        |-- articles2.csv.zip
-        |-- articles3.csv.zip
+    |-- corpora
+        |-- kaggle_news
+            |-- articles1.csv.zip
+            |-- articles2.csv.zip
+            |-- articles3.csv.zip
 ```
 
 <a name="custom"/>
@@ -236,4 +237,3 @@ To use your own custom data to fit the solver, you can do one of the following:
 1. Use random search to find better set of parameters.
 1. See if pre-computing log probabilities results in a significant speedup.
 1. See if turning tokens into joined strings speeds things up.
-1. Clean up this README!
