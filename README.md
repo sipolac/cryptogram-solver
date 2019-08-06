@@ -161,28 +161,25 @@ My intuition tells me that character n-grams do the heavy lifting for most of th
 ```python
 def simulated_annealing(encrypted, num_iters):
     """Python-style pseudo(-ish)code for simulated annealing algorithm."""
-    mapping = Mapping()
-    best_mapping = mapping
+    best_mapping = Mapping()
     best_score = compute_score(encrypted)
 
     for i in range(num_iters):
         temp = temp_list[i]  # from scheduler
         num_swaps = swap_list[i]  # from scheduler
 
-        new_mapping = mapping.random_swap(num_swaps)
-        new_text = new_mapping.translate(encrypted)
+        mapping = best_mapping.random_swap(num_swaps)
+        new_text = mapping.translate(encrypted)
         score = compute_score(new_text)
 
         score_change = score - best_score
 
         if exp(-score_change / temp) > uniform(0, 1):  # softmax
-            best_mapping = new_mapping
+            best_mapping = mapping
             best_score = score
 
-        mapping = best_mapping
-
-    decrypted = mapping.translate(encrypted)
-    return mapping, decrypted
+    decrypted = best_mapping.translate(encrypted)
+    return best_mapping, decrypted
 ```
 
 To decrease the number of swaps over time, I use a poisson distribution with a lambda parameter that decreases linearly. The scheduler for the number of swaps is

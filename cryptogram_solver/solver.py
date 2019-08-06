@@ -220,40 +220,36 @@ class Solver:
         and larger number of letter swaps to encourage exploration.
         """
         encrypted = encrypted.lower()
-        mapping = Mapping()
+        best_mapping = Mapping()
+        best_score = self.score(encrypted)
 
         temps = self._schedule_temp(log_temp_start, log_temp_end, num_iters)
         swap_list = self._schedule_swaps(lamb_start, lamb_end, num_iters)
-
-        best_mapping = mapping
-        best_score = self.score(encrypted)
 
         for i in tqdm(list(range(num_iters)), desc='decrypting'):
             temp = temps[i]
             swaps = swap_list[i]
 
-            new_mapping = mapping.random_swap(swaps)
-            new_text = new_mapping.translate(encrypted)
-            score = self.score(new_text)
+            mapping = best_mapping.random_swap(swaps)
+            text = mapping.translate(encrypted)
+            score = self.score(text)
 
             score_change = score - best_score
 
             if exp(-score_change / temp) > uniform(0, 1):
-                best_mapping = new_mapping
+                best_mapping = mapping
                 best_score = score
-
-            mapping = best_mapping
 
             if i % 1000 == 0:
                 self.logger.debug((
                     f'\nscore: {score:0.5g}'
-                    f'\nkey: {mapping.key}'
-                    f'\ndecrypted: {mapping.translate(encrypted)}'
+                    f'\nkey: {best_mapping.key}'
+                    f'\ndecrypted: {best_mapping.translate(encrypted)}'
                     '\n'
                 ))
 
-        decrypted = mapping.translate(encrypted)
-        return {'mapping': mapping, 'decrypted': decrypted}
+        decrypted = best_mapping.translate(encrypted)
+        return {'mapping': best_mapping, 'decrypted': decrypted}
 
     def _schedule_temp(self, start, end, n):
         # Return list instead of generator so you can subset later.
@@ -338,6 +334,7 @@ def run_solver(
             print('reading corpus data for fitting solver...')
             slv.fit(docs=utils.read_docs(docs_path, n_docs))
         if save_solver:
+            models_path.parent.mkdir(parents=True, exist_ok=True)
             slv.save(models_path)
 
     res = slv.decrypt(

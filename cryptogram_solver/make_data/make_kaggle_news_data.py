@@ -75,6 +75,7 @@ def main():
     parser.add_argument('--corpus_path', default=defaults.CORPUS_PATH, type=Path)
     parser.add_argument('--freqs_path', default=defaults.FREQS_PATH, type=Path)
     parser.add_argument('--write_freqs', action='store_true', default=True)
+    parser.add_argument('--num_docs', action='store_true', default=1000)
     args = parser.parse_args()
 
     log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
