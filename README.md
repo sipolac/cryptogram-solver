@@ -78,6 +78,8 @@ optional arguments:
 
 # Examples
 
+The default settings tend to work well most of the time. Usually you only need to specify the encrypted text, saving (`-s`), loading (`-l`) and the number of iterations (`-i`, which you can set to be lower for longer decryptions).
+
 To fit a solver on 1000 documents (`-n 1000`) from a custom corpus (`--docs_path <PATH>`) with a tokenizer that uses character bigrams and trigrams (`-c 2 3`) and word unigrams (`-w 1 1`) with a max vocab size of 5000 (`-b 5000`), save it to file (`-s`) (right now just to `models/cached/`), and solve the encrypted text (represented here as `<ENCRYPTED TEXT>`):
 
     python solver.py <ENCRYPTED TEXT> -n 1000 --docs_path <PATH> -c 2 3 -w 1 1 -b 5000 -s
@@ -85,8 +87,6 @@ To fit a solver on 1000 documents (`-n 1000`) from a custom corpus (`--docs_path
 To load a fitted solver (`-l`) and run the optimizer for 5000 iterations (`-i 5000`) with a starting lambda (for character swaps; see below) of 1 (`--lamb_start 1`) and verbose output (`-v`):
 
     python solver.py <ENCRYPTED TEXT> -l -i 5000 --lamb_start 1 -v
-
-The default settings tend to work well most of the time. Usually you only need to specify the encrypted text, saving (`-s`), loading (`-l`) and the number of iterations (`-i`, which you can set to be lower for longer decryptions). At some point I'd like to do some "hyperparameter" optimization to determine better default settings.
 
 
 <a name="whatis"/>
@@ -169,8 +169,8 @@ def simulated_annealing(encrypted, num_iters):
         num_swaps = swap_list[i]  # from scheduler
 
         mapping = best_mapping.random_swap(num_swaps)
-        new_text = mapping.translate(encrypted)
-        score = compute_score(new_text)
+        text = mapping.translate(encrypted)
+        score = compute_score(text)
 
         score_change = score - best_score
 
@@ -234,6 +234,6 @@ To use your own custom data to fit the solver, you can do one of the following:
 
 # TODOS
 1. Store data somewhere and write script to download it. (And possibly change the data source.)
-1. Use random search to find better set of parameters.
+1. Use random search to find better set of default parameters.
 1. See if pre-computing log probabilities results in a significant speedup.
 1. See if turning tokens into joined strings speeds things up.

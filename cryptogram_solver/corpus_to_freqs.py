@@ -21,10 +21,8 @@ def make_unigram_freqs(docs_path, outfile, n=None):
     This just makes loading easier instead of having to fit to a corpus
     each time. Only works if largest word n-gram degree is a unigram.
     """
-    tk = solver.Tokenizer(
-        char_ngram_range=None,
-        word_ngram_range=(1, 1)
-    )
+    tk = solver.Tokenizer(char_ngram_range=None,
+                          word_ngram_range=(1, 1))
     docs = utils.read_docs(docs_path)
     unigram_counts = defaultdict(int)
     for doc in tqdm(docs):

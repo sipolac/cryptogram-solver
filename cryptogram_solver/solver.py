@@ -129,18 +129,14 @@ class Solver:
 
         # Set config of solver. Right now set defaults as None, but later
         # can put in real default values.
-        default_cfg = dict(
-            char_ngram_range=None,
-            word_ngram_range=None,
-            vocab_size=None,
-            pseudo_count=None
-        )
+        default_cfg = dict(char_ngram_range=None,
+                           word_ngram_range=None,
+                           vocab_size=None,
+                           pseudo_count=None)
         self.cfg = utils.impute_defaults(cfg, default_cfg)
 
-        self.tokenizer = Tokenizer(
-            cfg['char_ngram_range'],
-            cfg['word_ngram_range']
-        )
+        self.tokenizer = Tokenizer(cfg['char_ngram_range'],
+                                   cfg['word_ngram_range'])
 
         # These are defined when fitted.
         self.vocab = None
@@ -203,15 +199,13 @@ class Solver:
             nll += -1 * log_prob * count
         return nll / len(tokens)  # take mean
 
-    def decrypt(
-        self,
-        encrypted,
-        num_iters,
-        log_temp_start,
-        log_temp_end,
-        lamb_start,
-        lamb_end
-    ):
+    def decrypt(self,
+                encrypted,
+                num_iters,
+                log_temp_start,
+                log_temp_end,
+                lamb_start,
+                lamb_end):
         """Decrypts cryptogram using simulated annealing.
 
         This uses a pre-set scheduler for both temperature (from simulated
@@ -300,21 +294,19 @@ def encrypt(text):
     return encrypted
 
 
-def run_solver(
-    text,
-    cfg=None,
-    num_iters=None,
-    log_temp_start=None,
-    log_temp_end=None,
-    lamb_start=None,
-    lamb_end=None,
-    freqs_path=None,
-    docs_path=None,
-    n_docs=None,
-    load_solver=False,
-    save_solver=False,
-    logger=None
-):
+def run_solver(text,
+               cfg=None,
+               num_iters=None,
+               log_temp_start=None,
+               log_temp_end=None,
+               lamb_start=None,
+               lamb_end=None,
+               freqs_path=None,
+               docs_path=None,
+               n_docs=None,
+               load_solver=False,
+               save_solver=False,
+               logger=None):
     """Decrypts text and prints results."""
 
     models_path = PROJECT_DIR / 'models' / 'cached'
@@ -337,14 +329,12 @@ def run_solver(
             models_path.parent.mkdir(parents=True, exist_ok=True)
             slv.save(models_path)
 
-    res = slv.decrypt(
-        text,
-        num_iters,
-        log_temp_start,
-        log_temp_end,
-        lamb_start,
-        lamb_end
-    )
+    res = slv.decrypt(text,
+                      num_iters,
+                      log_temp_start,
+                      log_temp_end,
+                      lamb_start,
+                      lamb_end)
     mapping, decrypted = res['mapping'], res['decrypted']
     print('\ncipher:')
     mapping.print_pretty()
@@ -476,28 +466,24 @@ def main():
         else:
             args.freqs_path = defaults.FREQS_PATH
 
-    cfg = dict(
-        char_ngram_range=args.char_ngram_range,
-        word_ngram_range=args.word_ngram_range,
-        vocab_size=args.vocab_size,
-        pseudo_count=args.pseudo_count
-    )
+    cfg = dict(char_ngram_range=args.char_ngram_range,
+               word_ngram_range=args.word_ngram_range,
+               vocab_size=args.vocab_size,
+               pseudo_count=args.pseudo_count)
 
-    run_solver(
-        text=args.text,
-        cfg=cfg,
-        num_iters=args.num_iters,
-        log_temp_start=args.log_temp_start,
-        log_temp_end=args.log_temp_end,
-        lamb_start=args.lamb_start,
-        lamb_end=args.lamb_end,
-        freqs_path=args.freqs_path,
-        docs_path=args.docs_path,
-        n_docs=args.n_docs,
-        load_solver=args.load_solver,
-        save_solver=args.save_solver,
-        logger=logger
-    )
+    run_solver(text=args.text,
+               cfg=cfg,
+               num_iters=args.num_iters,
+               log_temp_start=args.log_temp_start,
+               log_temp_end=args.log_temp_end,
+               lamb_start=args.lamb_start,
+               lamb_end=args.lamb_end,
+               freqs_path=args.freqs_path,
+               docs_path=args.docs_path,
+               n_docs=args.n_docs,
+               load_solver=args.load_solver,
+               save_solver=args.save_solver,
+               logger=logger)
 
 
 if __name__ == '__main__':
