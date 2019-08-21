@@ -91,7 +91,7 @@ def linspace(start, stop, num):
 
 
 def rpoisson(lamb):
-    """Draws a random sample from a poisson distribution given lambda.
+    """Draws a random sample from a Poisson distribution given lambda.
 
     When lambda is 0, output is 0.
 

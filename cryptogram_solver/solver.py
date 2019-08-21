@@ -217,12 +217,12 @@ class Solver:
         best_mapping = Mapping()
         best_score = self.score(encrypted)
 
-        temps = self._schedule_temp(log_temp_start, log_temp_end, num_iters)
+        temp_list = self._schedule_temp(log_temp_start, log_temp_end, num_iters)
         swap_list = self._schedule_swaps(lamb_start, lamb_end, num_iters)
 
         for i in tqdm(list(range(num_iters)), desc='decrypting'):
-            temp = temps[i]
-            swaps = swap_list[i]
+            temp = next(temp_list)
+            swaps = next(swap_list)
 
             mapping = best_mapping.random_swap(swaps)
             text = mapping.translate(encrypted)
@@ -246,11 +246,10 @@ class Solver:
         return {'mapping': best_mapping, 'decrypted': decrypted}
 
     def _schedule_temp(self, start, end, n):
-        # Return list instead of generator so you can subset later.
-        return [exp(x) for x in utils.linspace(start, end, n)]
+        return (exp(x) for x in utils.linspace(start, end, n))
 
     def _schedule_swaps(self, start, end, n):
-        return [utils.rpoisson(l) + 1 for l in utils.linspace(start, end, n)]
+        return (utils.rpoisson(l) + 1 for l in utils.linspace(start, end, n))
 
     def save(self, path):
         path.mkdir(exist_ok=True)
@@ -296,7 +295,7 @@ def encrypt(text):
 
 def run_solver(text,
                cfg=None,
-               num_iters=None,
+               iters=None,
                log_temp_start=None,
                log_temp_end=None,
                lamb_start=None,
@@ -330,7 +329,7 @@ def run_solver(text,
             slv.save(models_path)
 
     res = slv.decrypt(text,
-                      num_iters,
+                      iters,
                       log_temp_start,
                       log_temp_end,
                       lamb_start,
@@ -420,14 +419,14 @@ def main():
         '--lamb_start',
         default=defaults.LAMB_START,
         type=int,
-        help=('poisson lambda for number of additional letter swaps '
+        help=('Poisson lambda for number of additional letter swaps '
               'in beginning; use 0 for single swaps')
     )
     parser.add_argument(
         '--lamb_end',
         default=defaults.LAMB_END,
         type=int,
-        help=('poisson lambda for number of additional letter swaps '
+        help=('Poisson lambda for number of additional letter swaps '
               'at end; use 0 for single swaps')
     )
     parser.add_argument(

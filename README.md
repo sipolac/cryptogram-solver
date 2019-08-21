@@ -64,9 +64,9 @@ optional arguments:
   --log_temp_end LOG_TEMP_END
                         log of final temperature
   --lamb_start LAMB_START
-                        poisson lambda for number of additional letter swaps
+                        Poisson lambda for number of additional letter swaps
                         in beginning; use 0 for single swaps
-  --lamb_end LAMB_END   poisson lambda for number of additional letter swaps
+  --lamb_end LAMB_END   Poisson lambda for number of additional letter swaps
                         at end; use 0 for single swaps
   -l, --load_solver     load pre-fitted solver
   -s, --save_solver     save fitted solver for use later
@@ -154,7 +154,7 @@ You can think of score as error, so lower is better.
 
 ## Optimization
 
-For the optimization algorithm, I use [simulated annealing](https://en.wikipedia.org/wiki/Simulated_annealing). The algorithm is run for a pre-defined number of iterations, where in each iteration I swap random letters in the mapping and re-score the text. I use softmax on the difference of the scores of the current text and new text to determine whether I want to keep the new mapping. Better mappings are more likely to be kept, but I'm open to accepting worse mappings for the sake of exploration and escaping local minima. Over the course of the optimization, I decrease temperature (exponentially) so that I'm decreasingly likely to accept mappings that hurt the score. I also decrease the number of swaps per iteration (probabilistically, using the poisson process described below) to encourage exploration in the beginning and fine tuning at the end.
+I use a modified version of [simulated annealing](https://en.wikipedia.org/wiki/Simulated_annealing) for the optimization algorithm. The algorithm is run for a pre-defined number of iterations, where in each iteration it swaps random letters in the mapping and re-scores the text. It uses softmax on the difference of the scores of the current text and new text to determine whether it wants to keep the new mapping. Note that it's open to accepting worse mappings for the sake of exploration and escaping local minima. Over the course of the optimization, it decreases temperature (exponentially) so that it's decreasingly likely to accept mappings that hurt the score. It also decreases the number of swaps per iteration (probabilistically, using the Poisson process described below) to encourage exploration in the beginning and fine tuning at the end.
 
 My intuition tells me that character n-grams do the heavy lifting for most of the optimization, while the word n-grams help the algorithm "lock in" on good mappings at the end.
 
@@ -182,7 +182,7 @@ def simulated_annealing(encrypted, num_iters):
     return best_mapping, decrypted
 ```
 
-To decrease the number of swaps over time, I use a poisson distribution with a lambda parameter that decreases linearly. The scheduler for the number of swaps is
+To decrease the number of swaps over time, I use a Poisson distribution with a lambda parameter that decreases linearly. The scheduler for the number of swaps is
 
 ```python
 def schedule_swaps(lamb_start, lamb_end, n):
@@ -190,7 +190,7 @@ def schedule_swaps(lamb_start, lamb_end, n):
         yield rpoisson(l) + 1 
 ```
 
-where `lamb_start` is the starting lambda (at the beginning of the optimization), `lamb_end` is the ending lambda, `n` is the number of iterations in the optimization, `linspace` is a function that returns evenly spaced numbers over a specified interval (a basic version of [numpy's implementation](https://docs.scipy.org/doc/numpy/reference/generated/numpy.linspace.html)), and `rpoisson` is a function that draws a random sample from a poisson distribution given a lambda parameter. Note that a lambda greater than zero gives you *additional* swaps; if `lamb_start` and `lamb_end` are both zero, then in every iteration you swap only once.
+where `lamb_start` is the starting lambda (at the beginning of the optimization), `lamb_end` is the ending lambda, `n` is the number of iterations in the optimization, `linspace` is a function that returns evenly spaced numbers over a specified interval (a basic version of [numpy's implementation](https://docs.scipy.org/doc/numpy/reference/generated/numpy.linspace.html)), and `rpoisson` is a function that draws a random sample from a Poisson distribution given a lambda parameter. Note that a lambda greater than zero gives you *additional* swaps; if `lamb_start` and `lamb_end` are both zero, then in every iteration you swap only once.
 
 
 <a name="data"/>
